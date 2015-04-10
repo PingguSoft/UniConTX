@@ -26,7 +26,7 @@ private:
     u8   getCheckSum(u8 *data);
     u8   checkStatus(void);
     u8   getChannel(u8 id);
-    void getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron, u8* flags, u16 *led_blink);
+    void getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron, u16* flags, u16 *led_blink);
     void sendPacket(u8 bind);
     void initRxTxAddr(void);
     void init1(void);
@@ -38,11 +38,11 @@ private:
     u32  mPacketCtr;
     u16  mBindCtr;
     u16  mLedBlinkCtr;
+    u16  mAuxFlag;
     u8   mRFChanBufs[MAX_RF_CHANNELS];
     u8   mPacketBuf[MAX_PACKET_SIZE];
     u8   mRxTxAddrBuf[ADDR_BUF_SIZE];
     u8   mCurRFChan;
-    u8   mAuxFlag;
     u8   mState;
     u8   mPacketSent;
 protected:

@@ -87,17 +87,11 @@ void RFProtocolHiSky::buildBindingPacket(void)
 
 u16 RFProtocolHiSky::getChannel(u8 id)
 {
-    s32 ch = RFProtocol::getControl(id);
-    if (ch < CHAN_MIN_VALUE) {
-        ch = CHAN_MIN_VALUE;
-    } else if (ch > CHAN_MAX_VALUE) {
-        ch = CHAN_MAX_VALUE;
-    }
-
     u16 ret = (s32)RFProtocol::getControl(id) * 450 / CHAN_MAX_VALUE + 500; // max/min servo range is +-125%
     if (id == CH_THROTTLE)
         ret = 1000 - ret;
-
+    else if (id == CH_AUX3)                                                 // Channel 7 - Gyro mode, 0 - 6 axis, 3 - 3 axis
+        ret = (RFProtocol::getControl(id) <= 0) ? 0 : 3;
     if (ret < 0)
         ret = 0;
     else if (ret > 1000)
@@ -131,7 +125,7 @@ void RFProtocolHiSky::buildDataPacket(void)
     mPacketBuf[3] = (u8)ch;
     mPacketBuf[8] |= (u8)((ch >> 2) & 0x00c0);
     
-    for (i = 7; i >= 4; i--) {
+    for (i = CH_AUX4; i >= CH_AUX1; i--) {
         ch = getChannel(i);
         mPacketBuf[i]  = (u8)ch;
         mPacketBuf[9] |= (u8)((ch >> 2) & 0x0003);

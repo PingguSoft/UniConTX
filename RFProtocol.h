@@ -47,14 +47,14 @@ public:
         CH_AUX6,
         CH_AUX7,
         CH_AUX8,
-        MAX_CHANNEL = CH_AUX8
+        MAX_CHANNEL
     };
 
     enum {
         TRIM_RUDDER,
         TRIM_ELEVATOR,
         TRIM_AILERON,
-        MAX_TRIM = TRIM_AILERON
+        MAX_TRIM
     };
 
     enum {

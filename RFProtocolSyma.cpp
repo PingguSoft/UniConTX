@@ -12,6 +12,7 @@
 #define FLAG_FLIP           0x01
 #define FLAG_VIDEO          0x02
 #define FLAG_PICTURE        0x04
+#define FLAG_HEADLESS       0x08
 
 #define PROTO_OPT_X5C_X2    0x01
 
@@ -86,6 +87,12 @@ void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
         *flags &= ~FLAG_VIDEO;
     else
         *flags |= FLAG_VIDEO;
+
+    // Channel 8
+    if (RFProtocol::getControl(CH_AUX4) <= 0)
+        *flags &= ~FLAG_HEADLESS;
+    else
+        *flags |= FLAG_HEADLESS;    
 }
 
 #define X5C_CHAN2TRIM(X) ((((X) & 0x80 ? 0xff - (X) : 0x80 + (X)) >> 2) + 0x20)
@@ -141,7 +148,7 @@ void RFProtocolSyma::buildPacket(u8 bind)
         // use trims to extend controls
         mPacketBuf[5] = (getChannel(CH_ELEVATOR) >> 2) | 0xc0; // always high rates (bit 7 is rate control)
         mPacketBuf[6] = (getChannel(CH_RUDDER) >> 2)   | ((flag & FLAG_FLIP) ? 0x40 : 0x00);
-        mPacketBuf[7] = getChannel(CH_AILERON) >> 2;
+        mPacketBuf[7] = getChannel(CH_AILERON) >> 2    | ((flag & FLAG_HEADLESS) ? 0x80 : 0x00);
         mPacketBuf[8] = 0x00;
     }
     mPacketBuf[9] = getCheckSum(mPacketBuf);
@@ -273,10 +280,10 @@ void RFProtocolSyma::init1(void)
 }
 
 
-// write a strange first mPacketBuf to RF channel 8 ...
+// duplicate stock tx sending strange packet (effect unknown)
 static const PROGMEM u8 FIRST_PACKET[]   = { 0xf9, 0x96, 0x82, 0x1b, 0x20, 0x08, 0x08, 0xf2,
                                              0x7d, 0xef, 0xff, 0x00, 0x00, 0x00, 0x00 };
-static const PROGMEM u8 CHANS_BIND[]     = { 0x4b, 0x30, 0x40, 0x2e };
+static const PROGMEM u8 CHANS_BIND[]     = { 0x4b, 0x30, 0x40, 0x20 };
 static const PROGMEM u8 CHANS_BIND_X5C[] = { 0x27, 0x1b, 0x39, 0x28, 0x24, 0x22, 0x2e, 0x36,
                                              0x19, 0x21, 0x29, 0x14, 0x1e, 0x12, 0x2d, 0x18};
 

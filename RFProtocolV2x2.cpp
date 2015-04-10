@@ -15,13 +15,18 @@
 #define BLINK_COUNT_MAX     512
 
 enum {
-    V2x2_FLAG_CAMERA = 0x01, // also automatic Missile Launcher and Hoist in one direction
-    V2x2_FLAG_VIDEO  = 0x02, // also Sprayer, Bubbler, Missile Launcher(1), and Hoist in the other dir.
-    V2x2_FLAG_FLIP   = 0x04,
-    V2x2_FLAG_UNK9   = 0x08,
-    V2x2_FLAG_LED    = 0x10,
-    V2x2_FLAG_UNK10  = 0x20,
-    V2x2_FLAG_BIND   = 0xC0
+    // flags going to byte 14
+    FLAG_CAMERA = 0x01, // also automatic Missile Launcher and Hoist in one direction
+    FLAG_VIDEO  = 0x02, // also Sprayer, Bubbler, Missile Launcher(1), and Hoist in the other dir.
+    FLAG_FLIP   = 0x04,
+    FLAG_UNK9   = 0x08,
+    FLAG_LED    = 0x10,
+    FLAG_UNK10  = 0x20,
+    FLAG_BIND   = 0xC0,
+    // flags going to byte 10
+    FLAG_HEADLESS  = 0x0200,
+    FLAG_MAG_CAL_X = 0x0800,
+    FLAG_MAG_CAL_Y = 0x2000
 };
 
 enum {
@@ -32,7 +37,11 @@ enum {
     V202_DATA  = 0x10
 };
 
-#define PROTO_OPT_SKIP_BIND 0x01
+#define PROTO_OPT_SKIP_BIND         0x01
+#define PROTO_OPT_BITRATE_250KBPS   0x02
+#define PROTO_OPT_BLINK             0x04
+
+//#define USE_BLINK_OPTION
 
 enum {
     USEBLINK_NO  = 0,
@@ -80,7 +89,7 @@ u8 RFProtocolV2x2::getChannel(u8 id)
     return ret;
 }
 
-void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron, u8* flags, u16 *led_blink)
+void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron, u16* flags, u16 *led_blink)
 {
     // Protocol is registered AETRG, that is
     // Aileron is channel 0, Elevator - 1, Throttle - 2, Rudder - 3
@@ -105,14 +114,23 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
     // Channel 5
     // 512 - slow blinking (period 4ms*2*512 ~ 4sec), 64 - fast blinking (4ms*2*64 ~ 0.5sec)
     u16 nNewLedBlinkCtr;
+    
     s32 ch = RFProtocol::getControl(CH_AUX1);
     if (ch == CHAN_MIN_VALUE) {
         nNewLedBlinkCtr = BLINK_COUNT_MAX + 1;
     } else if (ch == CHAN_MAX_VALUE) {
         nNewLedBlinkCtr = BLINK_COUNT_MIN - 1;
     } else {
-        nNewLedBlinkCtr = (BLINK_COUNT_MAX+BLINK_COUNT_MIN)/2 -
-            ((s32) RFProtocol::getControl(CH_AUX1) * (BLINK_COUNT_MAX-BLINK_COUNT_MIN) / (2*CHAN_MAX_VALUE));
+#if defined(USE_BLINK_OPTION)
+        if (getProtocolOpt() & PROTO_OPT_BLINK) {
+#endif
+            nNewLedBlinkCtr = (BLINK_COUNT_MAX + BLINK_COUNT_MIN) / 2 -
+                ((s32) RFProtocol::getControl(CH_AUX1) * (BLINK_COUNT_MAX - BLINK_COUNT_MIN) / (2 * CHAN_MAX_VALUE));
+#if defined(USE_BLINK_OPTION)
+        } else {
+            nNewLedBlinkCtr = (ch <= 0) ? BLINK_COUNT_MAX + 1 : BLINK_COUNT_MAX - 1;
+        }
+#endif
     }
     if (*led_blink != nNewLedBlinkCtr) {
         if (mBindCtr > nNewLedBlinkCtr) 
@@ -122,27 +140,46 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
 
     // Channel 6
     if (RFProtocol::getControl(CH_AUX2) <= 0)
-        *flags &= ~V2x2_FLAG_FLIP;
+        *flags &= ~FLAG_FLIP;
     else
-        *flags |= V2x2_FLAG_FLIP;
+        *flags |= FLAG_FLIP;
 
     // Channel 7
     if (RFProtocol::getControl(CH_AUX3) <= 0)
-        *flags &= ~V2x2_FLAG_CAMERA;
+        *flags &= ~FLAG_CAMERA;
     else
-        *flags |= V2x2_FLAG_CAMERA;
+        *flags |= FLAG_CAMERA;
 
     // Channel 8
     if (RFProtocol::getControl(CH_AUX4) <= 0)
-        *flags &= ~V2x2_FLAG_VIDEO;
+        *flags &= ~FLAG_VIDEO;
     else
-        *flags |= V2x2_FLAG_VIDEO;
+        *flags |= FLAG_VIDEO;
+
+    // Channel 9
+    if (RFProtocol::getControl(CH_AUX5) <= 0) 
+        *flags &= ~FLAG_HEADLESS;
+    else 
+        *flags |= FLAG_HEADLESS;
+
+    // Channel 10
+    if (RFProtocol::getControl(CH_AUX6)  <= 0)
+        *flags &= ~FLAG_MAG_CAL_X;
+    else 
+        *flags |= FLAG_MAG_CAL_X;
+
+    // Channel 11
+    if (RFProtocol::getControl(CH_AUX6)  <= 0)
+        *flags &= ~FLAG_MAG_CAL_Y;
+    else
+        *flags |= FLAG_MAG_CAL_Y;
+    
 }
 
 void RFProtocolV2x2::sendPacket(u8 bind)
 {
     if (bind) {
-        mAuxFlag      = V2x2_FLAG_BIND;
+        mAuxFlag      = FLAG_BIND;
         mPacketBuf[0] = 0;
         mPacketBuf[1] = 0;
         mPacketBuf[2] = 0;
@@ -162,12 +199,12 @@ void RFProtocolV2x2::sendPacket(u8 bind)
     mPacketBuf[8] = mRxTxAddrBuf[1];
     mPacketBuf[9] = mRxTxAddrBuf[2];
     // empty
-    mPacketBuf[10] = 0x00;
+    mPacketBuf[10] = mAuxFlag >> 8;
     mPacketBuf[11] = 0x00;
     mPacketBuf[12] = 0x00;
     mPacketBuf[13] = 0x00;
     //
-    mPacketBuf[14] = mAuxFlag;
+    mPacketBuf[14] = mAuxFlag & 0xff;
     mPacketBuf[15] = getCheckSum(mPacketBuf);
 
     mPacketSent = 0;
@@ -252,7 +289,7 @@ void RFProtocolV2x2::init1(void)
     mDev.initialize();
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) ; i++) {
         if (i == NRF24L01_06_RF_SETUP) {
-            mDev.setBitrate(NRF24L01_BR_1M);
+            mDev.setBitrate((getProtocolOpt() & PROTO_OPT_BITRATE_250KBPS) ? NRF24L01_BR_250K : NRF24L01_BR_1M);
             mDev.setRFPower(getRFPower());
         } else {
             val = pgm_read_byte(TBL_INIT_REGS + i);
@@ -347,12 +384,12 @@ u16 RFProtocolV2x2::callState(void)
 
     case V202_DATA:
         if (mLedBlinkCtr > BLINK_COUNT_MAX) {
-            mAuxFlag |= V2x2_FLAG_LED;
+            mAuxFlag |= FLAG_LED;
         } else if (mLedBlinkCtr < BLINK_COUNT_MIN) {
-            mAuxFlag &= ~V2x2_FLAG_LED;
+            mAuxFlag &= ~FLAG_LED;
         } else if (--mBindCtr == 0) {
             mBindCtr = mLedBlinkCtr;
-            mAuxFlag ^= V2x2_FLAG_LED;
+            mAuxFlag ^= FLAG_LED;
         }
         if (mPacketSent && checkStatus() != PKT_ACKED) {
             return PACKET_CHKTIME_uS;
