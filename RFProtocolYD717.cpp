@@ -26,8 +26,11 @@
 // Stock tx fixed frequency is 0x3C. Receiver only binds on this freq.
 #define RF_CHANNEL          0x3C
 
-#define YD717_FLAG_FLIP     0x0F
-#define YD717_FLAG_LIGHT    0x10
+#define FLAG_FLIP           0x0F
+#define FLAG_LIGHT          0x80
+#define FLAG_PICTURE        0x40
+#define FLAG_VIDEO          0x20
+#define FLAG_HEADLESS       0x10
 
 // Packet ack status values
 enum {
@@ -107,15 +110,33 @@ void RFProtocolYD717::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ai
 
     // Channel 5
     if (RFProtocol::getControl(CH_AUX1) <= 0)
-      *flags &= ~YD717_FLAG_FLIP;
+      *flags &= ~FLAG_FLIP;
     else
-      *flags |= YD717_FLAG_FLIP;
+      *flags |= FLAG_FLIP;
 
     // Channel 6
     if (RFProtocol::getControl(CH_AUX2) <= 0)
-      *flags &= ~YD717_FLAG_LIGHT;
+      *flags &= ~FLAG_LIGHT;
     else
-      *flags |= YD717_FLAG_LIGHT;
+      *flags |= FLAG_LIGHT;
+
+    // Channel 7
+    if (RFProtocol::getControl(CH_AUX3) <= 0)
+      *flags &= ~FLAG_PICTURE;
+    else
+      *flags |= FLAG_PICTURE;
+
+    // Channel 8
+    if (RFProtocol::getControl(CH_AUX4) <= 0)
+      *flags &= ~FLAG_VIDEO;
+    else
+      *flags |= FLAG_VIDEO;
+
+    // Channel 9
+    if (RFProtocol::getControl(CH_AUX5) <= 0)
+      *flags &= ~FLAG_HEADLESS;
+    else
+      *flags |= FLAG_HEADLESS;    
 }
 
 void RFProtocolYD717::sendPacket(u8 bind)
