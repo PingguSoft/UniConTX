@@ -1,3 +1,18 @@
+/*
+ This project is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is derived from deviationTx project for Arduino.
+ 
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details. 
+ see <http://www.gnu.org/licenses/>
+*/
+
 #include <SPI.h>
 #include "RFProtocolSyma.h"
 #include "utils.h"
@@ -99,7 +114,7 @@ void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
 void RFProtocolSyma::buildPacketX5C(u8 bind)
 {
     u8 flag;
-    
+
     if (bind) {
         memset(mPacketBuf, 0, mPacketSize);
         mPacketBuf[7] = 0xae;
@@ -130,7 +145,7 @@ void RFProtocolSyma::buildPacketX5C(u8 bind)
 void RFProtocolSyma::buildPacket(u8 bind)
 {
     u8 flag;
-    
+
     if (bind) {
         mPacketBuf[0] = mRxTxAddrBuf[4];
         mPacketBuf[1] = mRxTxAddrBuf[3];
