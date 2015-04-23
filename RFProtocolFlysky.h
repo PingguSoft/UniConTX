@@ -40,6 +40,7 @@ private:
     void updateCRC(void);
     void buildBindPacket(u8 state);
     void buildPacket(u8 init);
+    void applyExtFlags(void);
 
 // variables
     DeviceA7105  mDev;

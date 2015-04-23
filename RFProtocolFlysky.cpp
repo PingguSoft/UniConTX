@@ -20,7 +20,38 @@
 #define MAX_BIND_COUNT          2500
 #define INITIAL_WAIT_uS         2400
 
-#define PROTO_OPT_WLTOYS        0x01
+#define PROTO_OPT_WLTOYS_V9X9   0x01
+#define PROTO_OPT_WLTOYS_V6X6   0x02
+#define PROTO_OPT_WLTOYS_V912   0x03
+
+enum {
+    // flags going to byte 10
+    FLAG_V9X9_VIDEO = 0x40,
+    FLAG_V9X9_CAMERA= 0x80,
+    // flags going to byte 12
+    FLAG_V9X9_UNK   = 0x10, // undocumented ?
+    FLAG_V9X9_LED   = 0x20,
+};
+
+enum {
+    // flags going to byte 13
+    FLAG_V6X6_HLESS1= 0x80,
+    // flags going to byte 14
+    FLAG_V6X6_VIDEO = 0x01,
+    FLAG_V6X6_YCAL  = 0x02,
+    FLAG_V6X6_XCAL  = 0x04,
+    FLAG_V6X6_RTH   = 0x08,
+    FLAG_V6X6_CAMERA= 0x10,
+    FLAG_V6X6_HLESS2= 0x20,
+    FLAG_V6X6_LED   = 0x40,
+    FLAG_V6X6_FLIP  = 0x80,
+};
+
+enum {
+    // flags going to byte 14
+    FLAG_V912_TOPBTN= 0x40,
+    FLAG_V912_BTMBTN= 0x80,
+};
 
 static const PROGMEM u8 TBL_INIT_REGS[] = {
      -1,  0x42, 0x00, 0x14, 0x00,  -1 ,  -1 , 0x00, 0x00, 0x00, 0x00, 0x01, 0x21, 0x05, 0x00, 0x50,
@@ -136,6 +167,80 @@ int RFProtocolFlysky::init1(void)
     return 1;
 }
 
+static const PROGMEM u8 X17_SEQ[10] = 
+    { 0x14, 0x31, 0x40, 0x49, 0x49,    // sometime first byte is 0x15
+      0x49, 0x49, 0x49, 0x49, 0x49, }; 
+
+void RFProtocolFlysky::applyExtFlags(void)
+{
+    static u8 seq;
+
+    switch (getProtocolOpt() & PROTO_OPT_WLTOYS_V9X9) {
+        case PROTO_OPT_WLTOYS_V9X9:
+            if (getControlByOrder(4) > 0)
+                mPacketBuf[12] |= FLAG_V9X9_LED;
+            if (getControlByOrder(5) > 0)
+                mPacketBuf[10] |= FLAG_V9X9_VIDEO;
+            if (getControlByOrder(6) > 0)
+                mPacketBuf[10] |= FLAG_V9X9_CAMERA;
+            if (getControlByOrder(7) > 0)
+                mPacketBuf[12] |= FLAG_V9X9_UNK;
+            break;
+
+        case PROTO_OPT_WLTOYS_V6X6:
+            mPacketBuf[13] = 0x00;
+            mPacketBuf[14] = 0x00;
+            if (getControlByOrder(4) > 0) // Lights
+                mPacketBuf[14] |= FLAG_V6X6_LED;
+            if (getControlByOrder(5) > 0) // flip button
+                mPacketBuf[14] |= FLAG_V6X6_FLIP;
+            if (getControlByOrder(6) > 0) // take picture button
+                mPacketBuf[14] |= FLAG_V6X6_CAMERA;
+            if (getControlByOrder(7) > 0) // video record
+                mPacketBuf[14] |= FLAG_V6X6_VIDEO;
+            if (getControlByOrder(8) > 0) { // headless mode
+                mPacketBuf[14] |= FLAG_V6X6_HLESS1;
+                mPacketBuf[13] |= FLAG_V6X6_HLESS2;
+            }
+            if (getControlByOrder(9) > 0) // RTH button
+                mPacketBuf[14] |= FLAG_V6X6_RTH;
+            if (getControlByOrder(10) > 0)
+                mPacketBuf[14] |= FLAG_V6X6_XCAL;
+            if (getControlByOrder(11) > 0)
+                mPacketBuf[14] |= FLAG_V6X6_YCAL;
+
+            mPacketBuf[15] = 0x10; // unknown
+            mPacketBuf[16] = 0x10; // unknown
+            mPacketBuf[17] = 0xAA; // unknown
+            mPacketBuf[18] = 0xAA; // unknown
+            mPacketBuf[19] = 0x60; // unknown, changes at irregular interval in stock TX
+            mPacketBuf[20] = 0x02; // unknown
+            break;
+
+        case PROTO_OPT_WLTOYS_V912:
+            seq++;
+            if (seq > 9)
+                seq = 0;
+            mPacketBuf[12] |= 0x20; // "channel 4" bit 6 always HIGH ?
+            mPacketBuf[13] = 0x00;  // unknown
+            mPacketBuf[14] = 0x00;
+            if (getControlByOrder(4) > 0)
+                mPacketBuf[14] |= FLAG_V912_BTMBTN; // bottom button
+            if (getControlByOrder(5) > 0)
+                mPacketBuf[14] |= FLAG_V912_TOPBTN; // top button
+            mPacketBuf[15] = 0x27; // [15] and [16] apparently hold an analog channel with a value lower than 1000
+            mPacketBuf[16] = 0x03; // maybe it's there for a pitch channel for a CP copter ?
+            mPacketBuf[17] = pgm_read_byte(X17_SEQ + (seq % 10)); // not sure what [17] & [18] are for, not even if they're useful
+            if (seq == 0)
+                mPacketBuf[18] = 0x02;
+            else
+                mPacketBuf[18] = 0x00;
+            mPacketBuf[19] = 0x00; // unknown
+            mPacketBuf[20] = 0x00; // unknown            
+            break;
+    }
+}
+
 void RFProtocolFlysky::buildPacket(u8 init)
 {
     //-100% =~ 0x03e8
@@ -156,16 +261,7 @@ void RFProtocolFlysky::buildPacket(u8 init)
         mPacketBuf[5 + i * 2] = value & 0xff;
         mPacketBuf[6 + i * 2] = (value >> 8) & 0xff;
     }
-    if ((getProtocolOpt() & PROTO_OPT_WLTOYS) == PROTO_OPT_WLTOYS) {
-        if(getControlByOrder(4) > 0)
-            mPacketBuf[12] |= 0x20;
-        if(getControlByOrder(5) > 0)
-            mPacketBuf[10] |= 0x40;
-        if(getControlByOrder(6) > 0)
-            mPacketBuf[10] |= 0x80;
-        if(getControlByOrder(7) > 0)
-            mPacketBuf[12] |= 0x10;
-    }
+    applyExtFlags();
 }
 
 u16 RFProtocolFlysky::callState(void)
@@ -201,6 +297,10 @@ int RFProtocolFlysky::init(void)
     }
 
     mTXID = getControllerID();
+
+    if ((mTXID & 0xf0) > 0x90)              // limit offset to 9 as higher values don't work with some RX (ie V912)
+        mTXID = mTXID - 0x70;
+
     mCurRFChanRow = mTXID % 16;
     mRFChanOffset = (mTXID & 0xff) / 16;
     mBindCtr      = MAX_BIND_COUNT;
