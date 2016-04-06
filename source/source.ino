@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -29,6 +29,7 @@
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
 #include "SerialProtocol.h"
+#include "RcvrPWM.h"
 
 #define FW_VERSION  0x0100
 
@@ -57,7 +58,7 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
                 delete mRFProto;
                 mRFProto = NULL;
             }
-            
+
             id = *(u32*)data;
             switch (RFProtocol::getModule(id)) {
                 case RFProtocol::TX_NRF24L01: {
@@ -90,7 +91,7 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
                     }
                 }
                 break;
-
+#if 0
                 case RFProtocol::TX_CYRF6936:
                     mRFProto = new RFProtocolDevo(id);
                     ret = 1;
@@ -113,7 +114,8 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
                     }
                 }
                 break;
-                    
+#endif
+
             }
             //mSerial.sendResponse(true, cmd, (u8*)&ret, sizeof(ret));
             mSerial.sendResponse(true, cmd, (u8*)mBaudAckStr, mBaudAckLen);
@@ -150,10 +152,12 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
             break;
 
         case SerialProtocol::CMD_INJECT_CONTROLS:
+#if 0
             if (mRFProto) {
                 mRFProto->injectControls((s16*)data, size >> 1);
                 ret = 1;
             }
+#endif
             mSerial.sendResponse(true, cmd, (u8*)&ret, sizeof(ret));
             break;
 
@@ -194,6 +198,8 @@ void setup()
     mSerial.begin(9600);
     mSerial.setCallback(serialCallback);
     mBaudChkCtr = 0;
+
+confPWMReceiver();
 }
 
 void loop()
@@ -211,9 +217,16 @@ void loop()
         mBaudAckLen = mSerial.getString(mBaudAckStr);
         mBaudChkCtr++;
     } else {
+#if 1
         mSerial.handleRX();
-        if (mRFProto)
+        if (mRFProto) {
+            mRFProto->injectControls((s16*)getRCs(), 6);
             mRFProto->loop();
+        }
+#else
+        mSerial.sendString("%4d %4d\n", getRC(4), getRC(5));
+        delay(100);
+#endif
     }
 }
 

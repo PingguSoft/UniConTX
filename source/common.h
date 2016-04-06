@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -30,7 +30,7 @@ typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef uint8_t u8;
-typedef uint16_t u16;
+//typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
