@@ -99,7 +99,7 @@ class DeviceNRF24L01
 {
     #define PIN_IRQ       2
     #define PIN_CSN       8
-    #define PIN_CE        7
+    #define PIN_CE        A0
 
     #define CS_HI() digitalWrite(PIN_CSN, HIGH);
     #define CS_LO() digitalWrite(PIN_CSN, LOW);

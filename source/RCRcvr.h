@@ -13,15 +13,26 @@
  see <http://www.gnu.org/licenses/>
 */
 
-#ifndef _RCVR_PWM_H_
-#define _RCVR_PWM_H_
+#ifndef _RCRCVR_H_
+#define _RCRCVR_H_
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include "Common.h"
 
-void confPWMReceiver(void);
-s16  getRC(u8 ch);
-s16 *getRCs(void);
-u8   getMaxCh(void);
+class RCRcvr 
+{
+
+public:
+    RCRcvr() { };
+
+    virtual void init(void);
+    virtual void close(void);
+    virtual s16  getRC(u8 ch);
+    virtual s16 *getRCs(void);
+    virtual u8   getMaxCh(void);
+
+private:
+
+};
 
 #endif

@@ -29,15 +29,16 @@
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
 #include "SerialProtocol.h"
-#include "RcvrPWM.h"
+#include "RCRcvrPWM.h"
 
-#define FW_VERSION  0x0100
+#define FW_VERSION  0x0120
 
 static SerialProtocol  mSerial;
 static u8 mBaudAckLen;
 static u8 mBaudChkCtr;
 static u8 mBaudAckStr[12];
 static RFProtocol *mRFProto = NULL;
+static RCRcvr *mRcvr = NULL;
 
 u32 serialCallback(u8 cmd, u8 *data, u8 size)
 {
@@ -54,12 +55,27 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
             break;
 
         case SerialProtocol::CMD_SET_RFPROTOCOL:
+            id = *(u32*)data;
+
+            // receiver
+            if (mRcvr) {
+                mRcvr->close();
+                delete mRcvr;
+                mRcvr = NULL;
+            }
+            switch(RFProtocol::getRcvr(id)) {
+                case RFProtocol::RCVR_PWM:
+                    mRcvr = new RCRcvrPWM();
+                    break;
+            }
+            if (mRcvr)
+                mRcvr->init();
+
+            // protocol
             if (mRFProto) {
                 delete mRFProto;
                 mRFProto = NULL;
             }
-
-            id = *(u32*)data;
             switch (RFProtocol::getModule(id)) {
                 case RFProtocol::TX_NRF24L01: {
                     ret = 1;
@@ -80,17 +96,16 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
                             mRFProto = new RFProtocolHiSky(id);
                             break;
 
-#if 0
                         case RFProtocol::PROTO_NRF24L01_CFLIE:
                             mRFProto = new RFProtocolCFlie(id);
                             break;
-#endif
                         default:
                             ret = 0;
                             break;
                     }
                 }
                 break;
+
 #if 0
                 case RFProtocol::TX_CYRF6936:
                     mRFProto = new RFProtocolDevo(id);
@@ -152,12 +167,10 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
             break;
 
         case SerialProtocol::CMD_INJECT_CONTROLS:
-#if 0
-            if (mRFProto) {
+            if (mRFProto && mRFProto->getRcvr() == RFProtocol::RCVR_MSP) {
                 mRFProto->injectControls((s16*)data, size >> 1);
                 ret = 1;
             }
-#endif
             mSerial.sendResponse(true, cmd, (u8*)&ret, sizeof(ret));
             break;
 
@@ -198,8 +211,6 @@ void setup()
     mSerial.begin(9600);
     mSerial.setCallback(serialCallback);
     mBaudChkCtr = 0;
-
-confPWMReceiver();
 }
 
 void loop()
@@ -220,7 +231,8 @@ void loop()
 #if 1
         mSerial.handleRX();
         if (mRFProto) {
-            mRFProto->injectControls((s16*)getRCs(), 6);
+            if (mRcvr)
+                mRFProto->injectControls(mRcvr->getRCs(), 6);
             mRFProto->loop();
         }
 #else

@@ -21,7 +21,7 @@
 #include "common.h"
 #include "utils.h"
 #include "RFProtocol.h"
-#include "RcvrPWM.h"
+#include "RCRcvrPWM.h"
 
 #define PIN_ELEVATOR                3
 #define PIN_AILERON                 4
@@ -29,6 +29,7 @@
 #define PIN_RUDDER                  6
 #define PIN_AUX1                    9
 #define PIN_AUX2                   10
+#define PIN_AUX3                    7
 
 #define PCINT_RX1_PIN_COUNT        4
 #define PCINT_RX1_PORT             PORTD
@@ -50,18 +51,17 @@
 
 
 static const PROGMEM u8 TBL_PINS_RX1[] = {
-    PIN_THROTTLE, PIN_RUDDER, PIN_ELEVATOR, PIN_AILERON,
+    PIN_THROTTLE, PIN_RUDDER, PIN_ELEVATOR, PIN_AILERON, PIN_AUX1
 };
 
 static const PROGMEM u8 TBL_PINS_RX2[] = {
-    PIN_AUX1 - 8, PIN_AUX2 - 8
+    PIN_AUX2, PIN_AUX3
 };
 
 static u16 wPrevTime[MAX_RC_PIN_CNT];
 static s16 sRC[MAX_RC_PIN_CNT];
 
-
-s16 getRC(u8 ch)
+s16 RCRcvrPWM::getRC(u8 ch)
 {
     if (ch > MAX_RC_PIN_CNT)
         return -500;
@@ -69,17 +69,17 @@ s16 getRC(u8 ch)
     return sRC[ch];
 }
 
-s16 *getRCs(void)
+s16 *RCRcvrPWM::getRCs(void)
 {
     return sRC;
 }
 
-u8 getMaxCh(void)
+u8 RCRcvrPWM::getMaxCh(void)
 {
     return MAX_RC_PIN_CNT;
 }
 
-void confPWMReceiver(void)
+void RCRcvrPWM::init(void)
 {
     memset(sRC, 0, sizeof(sRC));
     sRC[0] = -500;  // throttle min
@@ -93,7 +93,7 @@ void confPWMReceiver(void)
     }
 
     for (u8 i = 0; i < PCINT_RX2_PIN_COUNT; i++) {
-        u8 pin = pgm_read_byte(TBL_PINS_RX2 + i);
+        u8 pin = pgm_read_byte(TBL_PINS_RX2 + i) - 8;
 
         PCINT_RX2_PORT |= BV(pin);
         PCINT_RX2_MASK |= BV(pin);
@@ -101,6 +101,11 @@ void confPWMReceiver(void)
     }
 
     PCICR = PCINT_RX1_IR_BIT | PCINT_RX2_IR_BIT;
+}
+
+void RCRcvrPWM::close(void)
+{
+    PCICR = ~(PCINT_RX1_IR_BIT | PCINT_RX2_IR_BIT);
 }
 
 ISR(PCINT_RX1)
@@ -119,7 +124,7 @@ ISR(PCINT_RX1)
     ucLastPin = pins;
 
     for (u8 i = 0; i < PCINT_RX1_PIN_COUNT; i++) {
-        bv = BV(pgm_read_byte(TBL_PINS_RX1 + i));
+        bv = BV(pgm_read_byte(TBL_PINS_RX1 + i) - 8);
 
         if (mask & bv) {
             if (!(pins & bv)) {
@@ -150,7 +155,7 @@ ISR(PCINT_RX2)
     ucLastPin = pins;
 
     for (u8 i = 0; i < PCINT_RX2_PIN_COUNT; i++) {
-        bv = BV(pgm_read_byte(TBL_PINS_RX2 + i));
+        bv = BV(pgm_read_byte(TBL_PINS_RX2 + i) - 8);
 
         if (mask & bv) {
             if (!(pins & bv)) {

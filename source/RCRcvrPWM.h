@@ -5,30 +5,37 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef _RCVR_PWM_H_
+#define _RCVR_PWM_H_
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include "Common.h"
+#include "RCRcvr.h"
 
-// Bit vector from bit position
-#define BV(bit) (1 << (bit))
+class RCRcvrPWM : public RCRcvr
+{
 
-u32  rand32_r(u32 *seed, u8 update);
-u32  rand32();
+public:
+    RCRcvrPWM():RCRcvr() { }
+    ~RCRcvrPWM()  { close(); }
 
-#ifdef __DEBUG_PRINTF__
-void printf(char *fmt, ... );
-void printf(const __FlashStringHelper *fmt, ... );
-#else
-#define printf(...)
-#endif
+    
+    virtual void init(void);
+    virtual void close(void);
+    virtual s16  getRC(u8 ch);
+    virtual s16 *getRCs(void);
+    virtual u8   getMaxCh(void);
+
+private:
+
+};
+
 #endif

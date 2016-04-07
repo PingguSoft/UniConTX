@@ -27,6 +27,12 @@ public:
     #define CHAN_MIN_VALUE -500
 
     enum {
+        RCVR_MSP,
+        RCVR_PWM,
+        RCVR_PPM
+    };
+
+    enum {
         TX_NRF24L01,
         TX_A7105,
         TX_CYRF6936,
@@ -82,7 +88,8 @@ public:
 
     // utility functions
     static u32   buildID(u8 module, u8 proto, u8 option)  { return ((u32)module << 16 | (u32)proto << 8 | option); }
-    static u8    getModule(u32 id)      { return (id >> 16) & 0xff; }
+    static u8    getRcvr(u32 id)        { return (id >> 20) & 0x0f; }
+    static u8    getModule(u32 id)      { return (id >> 16) & 0x0f; }
     static u8    getProtocol(u32 id)    { return (id >> 8) & 0xff;  }
     static u8    getProtocolOpt(u32 id) { return id & 0xff;         }
 
@@ -91,7 +98,8 @@ public:
     virtual ~RFProtocol();
 
     u32  getProtoID(void)           { return mProtoID; }
-    u8   getModule(void)            { return (mProtoID >> 16) & 0xff; }
+    u8   getRcvr(void)              { return (mProtoID >> 20) & 0x0f; }
+    u8   getModule(void)            { return (mProtoID >> 16) & 0x0f; }
     u8   getProtocol(void)          { return (mProtoID >> 8) & 0xff;  }
     u8   getProtocolOpt(void)       { return mProtoID & 0xff; }
     void setControllerID(u32 id)    { mConID = id;     }
