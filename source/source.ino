@@ -17,6 +17,7 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include <SPI.h>
+#include <EEPROM.h>
 
 #include "common.h"
 #include "utils.h"
@@ -40,6 +41,95 @@ static u8 mBaudAckStr[12];
 static RFProtocol *mRFProto = NULL;
 static RCRcvr *mRcvr = NULL;
 
+struct Config {
+    u32 dwSignature;
+    u32 dwProtoID;
+    u32 dwConID;
+    u8  ucPower;
+};
+
+u8 initProtocol(u32 id)
+{
+    u8  ret = 0;
+
+    // receiver
+    if (mRcvr) {
+        mRcvr->close();
+        delete mRcvr;
+        mRcvr = NULL;
+    }
+    switch(RFProtocol::getRcvr(id)) {
+        case RFProtocol::RCVR_PWM:
+            mRcvr = new RCRcvrPWM();
+            break;
+    }
+    if (mRcvr)
+        mRcvr->init();
+
+    // protocol
+    if (mRFProto) {
+        delete mRFProto;
+        mRFProto = NULL;
+    }
+    switch (RFProtocol::getModule(id)) {
+        case RFProtocol::TX_NRF24L01: {
+            ret = 1;
+            switch (RFProtocol::getProtocol(id)) {
+                case RFProtocol::PROTO_NRF24L01_SYMAX:
+                    mRFProto = new RFProtocolSyma(id);
+                    break;
+
+                case RFProtocol::PROTO_NRF24L01_YD717:
+                    mRFProto = new RFProtocolYD717(id);
+                    break;
+
+                case RFProtocol::PROTO_NRF24L01_V2x2:
+                    mRFProto = new RFProtocolV2x2(id);
+                    break;
+
+                case RFProtocol::PROTO_NRF24L01_HISKY:
+                    mRFProto = new RFProtocolHiSky(id);
+                    break;
+
+                case RFProtocol::PROTO_NRF24L01_CFLIE:
+                    mRFProto = new RFProtocolCFlie(id);
+                    break;
+                default:
+                    ret = 0;
+                    break;
+            }
+        }
+        break;
+
+#if 0
+        case RFProtocol::TX_CYRF6936:
+            mRFProto = new RFProtocolDevo(id);
+            ret = 1;
+        break;
+
+        case RFProtocol::TX_A7105: {
+            ret = 1;
+            switch (RFProtocol::getProtocol(id)) {
+                case RFProtocol::PROTO_A7105_FLYSKY:
+                    mRFProto = new RFProtocolFlysky(id);
+                    break;
+
+                case RFProtocol::PROTO_A7105_HUBSAN:
+                    mRFProto = new RFProtocolHubsan(id);
+                    break;
+
+                default:
+                    ret = 0;
+                    break;
+            }
+        }
+        break;
+#endif
+    }
+
+    return ret;
+}
+
 u32 serialCallback(u8 cmd, u8 *data, u8 size)
 {
     u32 id;
@@ -57,81 +147,7 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
         case SerialProtocol::CMD_SET_RFPROTOCOL:
             id = *(u32*)data;
 
-            // receiver
-            if (mRcvr) {
-                mRcvr->close();
-                delete mRcvr;
-                mRcvr = NULL;
-            }
-            switch(RFProtocol::getRcvr(id)) {
-                case RFProtocol::RCVR_PWM:
-                    mRcvr = new RCRcvrPWM();
-                    break;
-            }
-            if (mRcvr)
-                mRcvr->init();
-
-            // protocol
-            if (mRFProto) {
-                delete mRFProto;
-                mRFProto = NULL;
-            }
-            switch (RFProtocol::getModule(id)) {
-                case RFProtocol::TX_NRF24L01: {
-                    ret = 1;
-                    switch (RFProtocol::getProtocol(id)) {
-                        case RFProtocol::PROTO_NRF24L01_SYMAX:
-                            mRFProto = new RFProtocolSyma(id);
-                            break;
-
-                        case RFProtocol::PROTO_NRF24L01_YD717:
-                            mRFProto = new RFProtocolYD717(id);
-                            break;
-
-                        case RFProtocol::PROTO_NRF24L01_V2x2:
-                            mRFProto = new RFProtocolV2x2(id);
-                            break;
-
-                        case RFProtocol::PROTO_NRF24L01_HISKY:
-                            mRFProto = new RFProtocolHiSky(id);
-                            break;
-
-                        case RFProtocol::PROTO_NRF24L01_CFLIE:
-                            mRFProto = new RFProtocolCFlie(id);
-                            break;
-                        default:
-                            ret = 0;
-                            break;
-                    }
-                }
-                break;
-
-#if 0
-                case RFProtocol::TX_CYRF6936:
-                    mRFProto = new RFProtocolDevo(id);
-                    ret = 1;
-                break;
-
-                case RFProtocol::TX_A7105: {
-                    ret = 1;
-                    switch (RFProtocol::getProtocol(id)) {
-                        case RFProtocol::PROTO_A7105_FLYSKY:
-                            mRFProto = new RFProtocolFlysky(id);
-                            break;
-
-                        case RFProtocol::PROTO_A7105_HUBSAN:
-                            mRFProto = new RFProtocolHubsan(id);
-                            break;
-
-                        default:
-                            ret = 0;
-                            break;
-                    }
-                }
-                break;
-#endif
-
-            }
+            ret = initProtocol(id);
             //mSerial.sendResponse(true, cmd, (u8*)&ret, sizeof(ret));
             mSerial.sendResponse(true, cmd, (u8*)mBaudAckStr, mBaudAckLen);
             break;
@@ -145,6 +161,14 @@ u32 serialCallback(u8 cmd, u8 *data, u8 size)
                 mRFProto->init();
                 ret = 1;
             }
+            struct Config conf;
+
+            conf.dwSignature = 0xCAFEBABE;
+            conf.dwProtoID   = mRFProto->getProtoID();
+            conf.dwConID     = id;
+            conf.ucPower     = sz;
+            EEPROM.put(0, conf);
+
             mSerial.sendResponse(true, cmd, (u8*)&ret, sizeof(ret));
             break;
 
@@ -211,6 +235,18 @@ void setup()
     mSerial.begin(9600);
     mSerial.setCallback(serialCallback);
     mBaudChkCtr = 0;
+
+    struct Config conf;
+    EEPROM.get(0, conf);
+
+    if (conf.dwSignature == 0xCAFEBABE) {
+        initProtocol(conf.dwProtoID);
+        if (mRFProto) {
+            mRFProto->setControllerID(conf.dwConID);
+            mRFProto->setRFPower(conf.ucPower);
+            mRFProto->init();
+        }
+    }
 }
 
 void loop()
@@ -232,12 +268,14 @@ void loop()
         mSerial.handleRX();
         if (mRFProto) {
             if (mRcvr)
-                mRFProto->injectControls(mRcvr->getRCs(), 6);
+                mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getMaxCh());
             mRFProto->loop();
         }
 #else
-        mSerial.sendString("%4d %4d\n", getRC(4), getRC(5));
-        delay(100);
+        if (mRcvr) {
+            mSerial.sendString("%4d %4d %4d\n", mRcvr->getRC(4), mRcvr->getRC(5), mRcvr->getRC(6));
+            delay(100);
+        }
 #endif
     }
 }

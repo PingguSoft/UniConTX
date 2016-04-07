@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -92,13 +92,13 @@ void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
         *flags |= FLAG_FLIP;
 
     // Channel 6
-    if (RFProtocol::getControl(CH_AUX2) <= 0)
+    if (RFProtocol::getControl(CH_AUX3) <= 0)
         *flags &= ~FLAG_PICTURE;
     else
         *flags |= FLAG_PICTURE;
 
     // Channel 7
-    if (RFProtocol::getControl(CH_AUX3) <= 0)
+    if (RFProtocol::getControl(CH_AUX2) <= 0)
         *flags &= ~FLAG_VIDEO;
     else
         *flags |= FLAG_VIDEO;
@@ -107,7 +107,7 @@ void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
     if (RFProtocol::getControl(CH_AUX4) <= 0)
         *flags &= ~FLAG_HEADLESS;
     else
-        *flags |= FLAG_HEADLESS;    
+        *flags |= FLAG_HEADLESS;
 }
 
 #define X5C_CHAN2TRIM(X) ((((X) & 0x80 ? 0xff - (X) : 0x80 + (X)) >> 2) + 0x20)
@@ -258,7 +258,7 @@ void RFProtocolSyma::init1(void)
 {
     u8 val;
     u8 bitrate;
-    
+
     mDev.initialize();
     mDev.setTxRxMode(TX_EN);
     mDev.readReg(NRF24L01_07_STATUS);

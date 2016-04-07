@@ -27,11 +27,11 @@
 #define PIN_AILERON                 4
 #define PIN_THROTTLE                5
 #define PIN_RUDDER                  6
-#define PIN_AUX1                    9
-#define PIN_AUX2                   10
-#define PIN_AUX3                    7
+#define PIN_AUX1                    7
+#define PIN_AUX2                    9
+#define PIN_AUX3                    10
 
-#define PCINT_RX1_PIN_COUNT        4
+#define PCINT_RX1_PIN_COUNT        5
 #define PCINT_RX1_PORT             PORTD
 #define PCINT_RX1_DDR              DDRD
 #define PCINT_RX1_MASK             PCMSK2
@@ -124,7 +124,7 @@ ISR(PCINT_RX1)
     ucLastPin = pins;
 
     for (u8 i = 0; i < PCINT_RX1_PIN_COUNT; i++) {
-        bv = BV(pgm_read_byte(TBL_PINS_RX1 + i) - 8);
+        bv = BV(pgm_read_byte(TBL_PINS_RX1 + i));
 
         if (mask & bv) {
             if (!(pins & bv)) {
