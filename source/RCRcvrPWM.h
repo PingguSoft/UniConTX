@@ -32,7 +32,7 @@ public:
     virtual void close(void);
     virtual s16  getRC(u8 ch);
     virtual s16 *getRCs(void);
-    virtual u8   getMaxCh(void);
+    virtual u8   getChCnt(void);
 
 private:
 

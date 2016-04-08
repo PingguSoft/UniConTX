@@ -31,24 +31,21 @@
 #define PIN_AUX2                    9
 #define PIN_AUX3                    10
 
-#define PCINT_RX1_PIN_COUNT        5
-#define PCINT_RX1_PORT             PORTD
-#define PCINT_RX1_DDR              DDRD
-#define PCINT_RX1_MASK             PCMSK2
-#define PCINT_RX1                  PCINT2_vect
-#define PCINT_RX1_PINS             PIND
-#define PCINT_RX1_IR_BIT           BV(2)
+#define PCINT_RX1_IDX               0
+#define PCINT_RX1_PORT              PORTD
+#define PCINT_RX1_DDR               DDRD
+#define PCINT_RX1_MASK              PCMSK2
+#define PCINT_RX1                   PCINT2_vect
+#define PCINT_RX1_PINS              PIND
+#define PCINT_RX1_IR_BIT            BV(2)
 
-#define PCINT_RX2_PIN_COUNT        2
-#define PCINT_RX2_PORT             PORTB
-#define PCINT_RX2_DDR              DDRB
-#define PCINT_RX2_MASK             PCMSK0
-#define PCINT_RX2                  PCINT0_vect
-#define PCINT_RX2_PINS             PINB
-#define PCINT_RX2_IR_BIT           BV(0)
-
-#define MAX_RC_PIN_CNT             (PCINT_RX1_PIN_COUNT + PCINT_RX2_PIN_COUNT)
-
+#define PCINT_RX2_IDX               1
+#define PCINT_RX2_PORT              PORTB
+#define PCINT_RX2_DDR               DDRB
+#define PCINT_RX2_MASK              PCMSK0
+#define PCINT_RX2                   PCINT0_vect
+#define PCINT_RX2_PINS              PINB
+#define PCINT_RX2_IR_BIT            BV(0)
 
 static const PROGMEM u8 TBL_PINS_RX1[] = {
     PIN_THROTTLE, PIN_RUDDER, PIN_ELEVATOR, PIN_AILERON, PIN_AUX1
@@ -58,12 +55,12 @@ static const PROGMEM u8 TBL_PINS_RX2[] = {
     PIN_AUX2, PIN_AUX3
 };
 
-static u16 wPrevTime[MAX_RC_PIN_CNT];
-static s16 sRC[MAX_RC_PIN_CNT];
+static u16 wPrevTime[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
+static s16 sRC[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
 
 s16 RCRcvrPWM::getRC(u8 ch)
 {
-    if (ch > MAX_RC_PIN_CNT)
+    if (ch >= getChCnt())
         return -500;
 
     return sRC[ch];
@@ -74,9 +71,9 @@ s16 *RCRcvrPWM::getRCs(void)
     return sRC;
 }
 
-u8 RCRcvrPWM::getMaxCh(void)
+u8 RCRcvrPWM::getChCnt(void)
 {
-    return MAX_RC_PIN_CNT;
+    return sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2);
 }
 
 void RCRcvrPWM::init(void)
@@ -84,7 +81,7 @@ void RCRcvrPWM::init(void)
     memset(sRC, 0, sizeof(sRC));
     sRC[0] = -500;  // throttle min
 
-    for (u8 i = 0; i < PCINT_RX1_PIN_COUNT; i++) {
+    for (u8 i = 0; i < sizeof(TBL_PINS_RX1); i++) {
         u8 pin = pgm_read_byte(TBL_PINS_RX1 + i);
 
         PCINT_RX1_PORT |= BV(pin);
@@ -92,7 +89,7 @@ void RCRcvrPWM::init(void)
         PCINT_RX1_DDR  &= ~BV(pin);
     }
 
-    for (u8 i = 0; i < PCINT_RX2_PIN_COUNT; i++) {
+    for (u8 i = 0; i < sizeof(TBL_PINS_RX2); i++) {
         u8 pin = pgm_read_byte(TBL_PINS_RX2 + i) - 8;
 
         PCINT_RX2_PORT |= BV(pin);
@@ -108,62 +105,72 @@ void RCRcvrPWM::close(void)
     PCICR = ~(PCINT_RX1_IR_BIT | PCINT_RX2_IR_BIT);
 }
 
+void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
+{
+    u8  bv;
+    u8  *tbl;
+    u8  size;
+    u8  start;
+    u8  bit;
+    u16 wDiff;
+
+    if (idx == PCINT_RX1_IDX) {
+        tbl   = (u8*)TBL_PINS_RX1;
+        size  = sizeof(TBL_PINS_RX1);
+        start = 0;
+        bit   = 0;
+    }
+    else {
+        tbl   = (u8*)TBL_PINS_RX2;
+        size  = sizeof(TBL_PINS_RX2);
+        start = sizeof(TBL_PINS_RX1); 
+        bit   = 8;
+    }
+
+    for (u8 i = 0; i < size; i++) {
+        bv = BV(pgm_read_byte(tbl + i) - bit);
+        if (mask & bv) {
+            if (!(pins & bv)) {
+                wDiff  = constrain(ts - wPrevTime[start + i], 1000, 2000);
+                sRC[i] = map(wDiff, 1000, 2000, -500, 500);
+                if (i & 0x01)
+                    sRC[start + i] = -sRC[start + i];
+            } else {
+                wPrevTime[start + i] = ts;
+            }
+        }
+    }
+}
+
 ISR(PCINT_RX1)
 {
     u8  mask;
     u8  pins;
-    u8  bv;
-    u16 wTime;
-    u16 wDiff;
+    u16 wTS;
     static u8 ucLastPin;
 
-    pins  = PCINT_RX1_PINS;
-    mask  = pins ^ ucLastPin;
-    wTime = micros();
-    sei();
+    pins      = PCINT_RX1_PINS;
+    mask      = pins ^ ucLastPin;
+    wTS       = micros();
     ucLastPin = pins;
 
-    for (u8 i = 0; i < PCINT_RX1_PIN_COUNT; i++) {
-        bv = BV(pgm_read_byte(TBL_PINS_RX1 + i));
-
-        if (mask & bv) {
-            if (!(pins & bv)) {
-                wDiff = constrain(wTime - wPrevTime[i], 1000, 2000);
-                sRC[i]= map(wDiff, 1000, 2000, -500, 500);
-                if (i & 0x01)
-                    sRC[i] = -sRC[i];
-            } else {
-                wPrevTime[i] = wTime;
-            }
-        }
-    }
+    sei();
+    calcPeriod(PCINT_RX1_IDX, wTS, mask, pins);
 }
 
 ISR(PCINT_RX2)
 {
     u8  mask;
     u8  pins;
-    u8  bv;
-    u16 wTime;
-    u16 wDiff;
+    u16 wTS;
     static u8 ucLastPin;
 
-    pins  = PCINT_RX2_PINS;
-    mask  = pins ^ ucLastPin;
-    wTime = micros();
-    sei();
+    pins      = PCINT_RX2_PINS;
+    mask      = pins ^ ucLastPin;
+    wTS       = micros();
     ucLastPin = pins;
 
-    for (u8 i = 0; i < PCINT_RX2_PIN_COUNT; i++) {
-        bv = BV(pgm_read_byte(TBL_PINS_RX2 + i) - 8);
-
-        if (mask & bv) {
-            if (!(pins & bv)) {
-                wDiff = constrain(wTime - wPrevTime[PCINT_RX1_PIN_COUNT + i], 1000, 2000);
-                sRC[PCINT_RX1_PIN_COUNT + i] = map(wDiff, 1000, 2000, -500, 500);
-            } else {
-                wPrevTime[PCINT_RX1_PIN_COUNT + i] = wTime;
-            }
-        }
-    }
+    sei();
+    calcPeriod(PCINT_RX2_IDX, wTS, mask, pins);
 }
+

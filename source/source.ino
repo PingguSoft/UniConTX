@@ -267,8 +267,9 @@ void loop()
 #if 1
         mSerial.handleRX();
         if (mRFProto) {
-            if (mRcvr)
-                mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getMaxCh());
+            if (mRcvr) {
+                mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getChCnt());
+            }
             mRFProto->loop();
         }
 #else
