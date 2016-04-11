@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -97,7 +97,7 @@ enum {
 
 class DeviceNRF24L01
 {
-    #define PIN_IRQ       2
+//    #define PIN_IRQ       2
     #define PIN_CSN       8
     #define PIN_CE        A0
 

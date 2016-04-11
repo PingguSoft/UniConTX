@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -33,7 +33,7 @@
 
 void DeviceNRF24L01::initialize()
 {
-    pinMode(PIN_IRQ, INPUT);
+//    pinMode(PIN_IRQ, INPUT);
     pinMode(PIN_CSN, OUTPUT);
     pinMode(PIN_CE, OUTPUT);
 
@@ -198,25 +198,25 @@ u8 DeviceNRF24L01::setRFPower(u8 power)
     switch(power) {
         case TXPOWER_100uW:
         case TXPOWER_300uW:
-        case TXPOWER_1mW:   
-            nrf_power = 0; 
+        case TXPOWER_1mW:
+            nrf_power = 0;
             break;
 
         case TXPOWER_3mW:
-        case TXPOWER_10mW:  
-            nrf_power = 1; 
+        case TXPOWER_10mW:
+            nrf_power = 1;
             break;
 
-        case TXPOWER_30mW:  
-            nrf_power = 2; 
+        case TXPOWER_30mW:
+            nrf_power = 2;
             break;
 
         case TXPOWER_100mW:
-        case TXPOWER_150mW: 
-            nrf_power = 3; 
+        case TXPOWER_150mW:
+            nrf_power = 3;
             break;
     };
-    
+
     // Power is in range 0..3 for nRF24L01
     mRFsetup = (mRFsetup & 0xF9) | ((nrf_power & 0x03) << 1);
     return writeReg(NRF24L01_06_RF_SETUP, mRFsetup);

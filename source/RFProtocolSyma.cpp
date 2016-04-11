@@ -92,13 +92,13 @@ void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
         *flags |= FLAG_FLIP;
 
     // Channel 6
-    if (RFProtocol::getControl(CH_AUX3) <= 0)
+    if (RFProtocol::getControl(CH_AUX2) <= 0)
         *flags &= ~FLAG_PICTURE;
     else
         *flags |= FLAG_PICTURE;
 
     // Channel 7
-    if (RFProtocol::getControl(CH_AUX2) <= 0)
+    if (RFProtocol::getControl(CH_AUX3) <= 0)
         *flags &= ~FLAG_VIDEO;
     else
         *flags |= FLAG_VIDEO;

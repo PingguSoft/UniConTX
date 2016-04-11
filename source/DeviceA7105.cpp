@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -27,7 +27,7 @@ void DeviceA7105::initialize()
     CS_HI();
     TX_LO();
     RX_LO();
-    
+
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
@@ -49,7 +49,7 @@ u8 DeviceA7105::writeReg(u8 reg, u8 data)
 u8 DeviceA7105::writeData(const u8 *data, u8 length, u8 channel)
 {
     u8 i;
-    
+
     CS_LO();
     PROTOSPI_xfer(A7105_RST_WRPTR);
     u8 res = PROTOSPI_xfer(0x05);

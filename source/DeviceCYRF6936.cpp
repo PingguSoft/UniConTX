@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -121,7 +121,7 @@ int DeviceCYRF6936::reset()
     writeReg(CYRF_0C_XTAL_CTRL, 0xC0); //Enable XOUT as GPIO
     writeReg(CYRF_0D_IO_CFG, 0x04); //Enable PACTL as GPIO
     setTxRxMode(TXRX_OFF);
-    
+
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
@@ -134,7 +134,7 @@ void DeviceCYRF6936::readMfgID(u8 *data)
     readRegMulti(0x25, data, 6);
 
     /* Fuses power off */
-    writeReg(0x25, 0x00); 
+    writeReg(0x25, 0x00);
 }
 
 void DeviceCYRF6936::setRFChannel(u8 ch)
@@ -194,7 +194,7 @@ u8 DeviceCYRF6936::writePayload(const u8 *data, u8 length)
     writeReg(0x02, 0x40);
     writeRegMulti(0x20, data, length);
     writeReg(0x02, 0xBF);
-    
+
     return res;
 }
 
@@ -204,7 +204,7 @@ u8 DeviceCYRF6936::writePayload_P(const u8 *data, u8 length)
     writeReg(0x02, 0x40);
     writeRegMulti_P(0x20, data, length);
     writeReg(0x02, 0xBF);
-    
+
     return res;
 }
 
@@ -216,11 +216,11 @@ u8 DeviceCYRF6936::readPayload(u8 *data, u8 length)
 u8 DeviceCYRF6936::readRSSI(u32 dodummyread)
 {
     u8 result;
-    
+
     if(dodummyread) {
         readReg(0x13);
     }
-    
+
     result = readReg(0x13);
     if(result & 0x80) {
         result = readReg(0x13);
@@ -243,7 +243,7 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
     int i;
     int j;
     memset(channels, 0, sizeof(u8) * len);
-    
+
     setCRCSeed(0x0000);
     setTxRxMode(RX_EN);
     //Wait for pre-amp to switch from send to receive
@@ -262,7 +262,7 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
             if (rssi[j] < rssi[channels[i]]) {
                 channels[i] = j;
             }
-            
+
         }
         for (j = channels[i] - minspace; j < channels[i] + minspace; j++) {
             //Ensure we don't reuse any channels within minspace of the selected channel again

@@ -9461,7 +9461,6 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <part name="R9" library="SparkFun" deviceset="RESISTOR" device="0402" value="0"/>
 <part name="R11" library="SparkFun" deviceset="RESISTOR" device="0402" value="0"/>
 <part name="R12" library="SparkFun" deviceset="RESISTOR" device="0402" value="0"/>
-<part name="R13" library="SparkFun" deviceset="RESISTOR" device="0402" value="0"/>
 <part name="R18" library="SparkFun" deviceset="RESISTOR" device="0402" value="0"/>
 </parts>
 <sheets>
@@ -9586,10 +9585,6 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <instance part="R12" gate="G$1" x="162.56" y="121.92" smashed="yes">
 <attribute name="NAME" x="157.48" y="122.1486" size="1.778" layer="95"/>
 <attribute name="VALUE" x="165.608" y="121.92" size="1.778" layer="96"/>
-</instance>
-<instance part="R13" gate="G$1" x="162.56" y="119.38" smashed="yes">
-<attribute name="NAME" x="157.48" y="119.6086" size="1.778" layer="95"/>
-<attribute name="VALUE" x="165.608" y="119.38" size="1.778" layer="96"/>
 </instance>
 <instance part="R18" gate="G$1" x="162.56" y="170.18" smashed="yes">
 <attribute name="NAME" x="157.48" y="170.4086" size="1.778" layer="95"/>
@@ -9957,7 +9952,6 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <label x="147.32" y="119.38" size="1.778" layer="95"/>
 <pinref part="U1" gate="G$1" pin="PB2(SS/OC1B)"/>
 <wire x1="144.78" y1="119.38" x2="157.48" y2="119.38" width="0.1524" layer="91"/>
-<pinref part="R13" gate="G$1" pin="1"/>
 </segment>
 </net>
 <net name="N$11" class="0">
@@ -10057,7 +10051,7 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <pinref part="R11" gate="G$1" pin="1"/>
 </segment>
 </net>
-<net name="IRQ_NRF" class="0">
+<net name="AUX3" class="0">
 <segment>
 <pinref part="SV1" gate="G$1" pin="8"/>
 <wire x1="226.06" y1="177.8" x2="215.9" y2="177.8" width="0.1524" layer="91"/>
@@ -10195,13 +10189,6 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <pinref part="R12" gate="G$1" pin="2"/>
 <wire x1="167.64" y1="121.92" x2="172.72" y2="121.92" width="0.1524" layer="91"/>
 <label x="172.72" y="121.92" size="1.27" layer="95" xref="yes"/>
-</segment>
-</net>
-<net name="AUX3" class="0">
-<segment>
-<pinref part="R13" gate="G$1" pin="2"/>
-<wire x1="167.64" y1="119.38" x2="172.72" y2="119.38" width="0.1524" layer="91"/>
-<label x="172.72" y="119.38" size="1.27" layer="95" xref="yes"/>
 </segment>
 </net>
 <net name="AUX1" class="0">

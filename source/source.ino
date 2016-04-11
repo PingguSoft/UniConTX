@@ -48,10 +48,8 @@ struct Config {
     u8  ucPower;
 };
 
-u8 initProtocol(u32 id)
+static void initReceiver(u32 id)
 {
-    u8  ret = 0;
-
     // receiver
     if (mRcvr) {
         mRcvr->close();
@@ -65,6 +63,13 @@ u8 initProtocol(u32 id)
     }
     if (mRcvr)
         mRcvr->init();
+}
+
+static u8 initProtocol(u32 id)
+{
+    u8  ret = 0;
+
+    initReceiver(id);
 
     // protocol
     if (mRFProto) {
@@ -126,9 +131,10 @@ u8 initProtocol(u32 id)
         break;
 #endif
     }
-
     return ret;
 }
+
+
 
 u32 serialCallback(u8 cmd, u8 *data, u8 size)
 {
@@ -264,8 +270,8 @@ void loop()
         mBaudAckLen = mSerial.getString(mBaudAckStr);
         mBaudChkCtr++;
     } else {
-#if 1
         mSerial.handleRX();
+#if 1
         if (mRFProto) {
             if (mRcvr) {
                 mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getChCnt());
@@ -274,7 +280,7 @@ void loop()
         }
 #else
         if (mRcvr) {
-            mSerial.sendString("%4d %4d %4d\n", mRcvr->getRC(4), mRcvr->getRC(5), mRcvr->getRC(6));
+            mSerial.sendString("%4d %4d %4d %d\n", mRcvr->getRC(4), mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getChCnt());
             delay(100);
         }
 #endif

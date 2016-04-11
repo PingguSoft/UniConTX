@@ -27,9 +27,9 @@
 #define PIN_AILERON                 4
 #define PIN_THROTTLE                5
 #define PIN_RUDDER                  6
-#define PIN_AUX1                    7
-#define PIN_AUX2                    9
-#define PIN_AUX3                    10
+#define PIN_AUX1                    2
+#define PIN_AUX2                    7
+#define PIN_AUX3                    9
 
 #define PCINT_RX1_IDX               0
 #define PCINT_RX1_PORT              PORTD
@@ -48,11 +48,11 @@
 #define PCINT_RX2_IR_BIT            BV(0)
 
 static const PROGMEM u8 TBL_PINS_RX1[] = {
-    PIN_THROTTLE, PIN_RUDDER, PIN_ELEVATOR, PIN_AILERON, PIN_AUX1
+    PIN_THROTTLE, PIN_RUDDER, PIN_ELEVATOR, PIN_AILERON, PIN_AUX1, PIN_AUX2
 };
 
 static const PROGMEM u8 TBL_PINS_RX2[] = {
-    PIN_AUX2, PIN_AUX3
+    PIN_AUX3
 };
 
 static u16 wPrevTime[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
@@ -119,11 +119,10 @@ void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
         size  = sizeof(TBL_PINS_RX1);
         start = 0;
         bit   = 0;
-    }
-    else {
+    } else {
         tbl   = (u8*)TBL_PINS_RX2;
         size  = sizeof(TBL_PINS_RX2);
-        start = sizeof(TBL_PINS_RX1); 
+        start = sizeof(TBL_PINS_RX1);
         bit   = 8;
     }
 
@@ -132,8 +131,8 @@ void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
         if (mask & bv) {
             if (!(pins & bv)) {
                 wDiff  = constrain(ts - wPrevTime[start + i], 1000, 2000);
-                sRC[i] = map(wDiff, 1000, 2000, -500, 500);
-                if (i & 0x01)
+                sRC[start + i] = map(wDiff, 1000, 2000, -500, 500);
+                if (idx == PCINT_RX1_IDX && (i == 1 || i == 3))
                     sRC[start + i] = -sRC[start + i];
             } else {
                 wPrevTime[start + i] = ts;
