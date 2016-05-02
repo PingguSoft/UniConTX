@@ -7,7 +7,7 @@
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -71,6 +71,7 @@ u8 available(struct ringBuf *buf)
     return ((u8)(buf->head - buf->tail)) % MAX_BUF_SIZE;
 }
 
+#if 0
 ISR(USART_RX_vect)
 {
     putChar(&mRxRingBuf, UDR0);
@@ -92,6 +93,7 @@ ISR(USART_UDRE_vect)
     if (tail == buf->head)
         UCSR0B &= ~(1<<UDRIE0);
 }
+#endif
 
 SerialProtocol::SerialProtocol()
 {
@@ -115,7 +117,7 @@ void SerialProtocol::begin(u32 baud)
     u8 data;
     for (u8 i = 0; i < 32; i++)
         data = UDR0;
-    
+
     UCSR0A = (1<<U2X0);
     UBRR0H = h;
     UBRR0L = l;
@@ -162,7 +164,7 @@ void SerialProtocol::sendString(char *fmt, ...)
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
-    
+
     va_start (args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
@@ -179,7 +181,7 @@ u8 SerialProtocol::getString(u8 *buf)
 
     for (u8 i = 0; i < size; i++)
         *buf++ = getChar(&mRxRingBuf);
-    
+
     return size;
 }
 

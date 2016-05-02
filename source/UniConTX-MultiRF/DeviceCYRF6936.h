@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -79,15 +79,6 @@ enum CYRF_PWR {
 
 class DeviceCYRF6936
 {
-    #define PIN_CSN       A7
-    #define PIN_RESET     10
-
-    #define CS_HI() digitalWrite(PIN_CSN, HIGH);
-    #define CS_LO() digitalWrite(PIN_CSN, LOW);
-    #define RST_HI() digitalWrite(PIN_RESET, HIGH);
-    #define RST_LO() digitalWrite(PIN_RESET, LOW);
-
-    
 public:
     void initialize();
     int  reset();
@@ -111,7 +102,7 @@ public:
     u8   readPayload(u8 *data, u8 length);
     u8   readRSSI(u32 dodummyread);
     void findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min, u8 max);
-    
+
 // To enable radio transmit after WritePayload you need to turn the radio
 //void PulseCE();
 

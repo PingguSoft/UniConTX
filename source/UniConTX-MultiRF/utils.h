@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -25,10 +25,12 @@
 u32  rand32_r(u32 *seed, u8 update);
 u32  rand32();
 
+#define __DEBUG_PRINTF__    1
+
 #ifdef __DEBUG_PRINTF__
-void printf(char *fmt, ... );
-void printf(const __FlashStringHelper *fmt, ... );
+void printf2(char *fmt, ... );
+void printf2(const __FlashStringHelper *fmt, ... );
 #else
-#define printf(...)
+#define printf2(...)
 #endif
 #endif

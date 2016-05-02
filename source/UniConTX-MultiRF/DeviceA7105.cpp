@@ -21,9 +21,6 @@
 void DeviceA7105::initialize()
 {
     INIT_COMMON();
-    pinMode(PIN_CSN,  OUTPUT);
-
-    CS_HI();
     RF_SEL_7105();
 
     SPI.begin();
@@ -36,10 +33,10 @@ void DeviceA7105::initialize()
 
 u8 DeviceA7105::writeReg(u8 reg, u8 data)
 {
-    CS_LO();
+    A7105_CS_LO();
     u8 res = PROTOSPI_xfer(reg);
     PROTOSPI_xfer(data);
-    CS_HI();
+    A7105_CS_HI();
 
     return res;
 }
@@ -48,18 +45,18 @@ u8 DeviceA7105::writeData(const u8 *data, u8 length, u8 channel)
 {
     u8 i;
 
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(A7105_RST_WRPTR);
     u8 res = PROTOSPI_xfer(0x05);
     for (i = 0; i < length; i++)
         PROTOSPI_xfer(*data++);
-    CS_HI();
+    A7105_CS_HI();
 
     writeReg(0x0F, channel);
 
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(A7105_TX);
-    CS_HI();
+    A7105_CS_HI();
 
     return res;
 }
@@ -67,28 +64,28 @@ u8 DeviceA7105::writeData(const u8 *data, u8 length, u8 channel)
 u8 DeviceA7105::writeData_P(const u8 *data, u8 length,  u8 channel)
 {
     int i;
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(A7105_RST_WRPTR);
     u8 res = PROTOSPI_xfer(0x05);
     for (i = 0; i < length; i++)
         PROTOSPI_xfer(pgm_read_byte(data++));
-    CS_HI();
+    A7105_CS_HI();
 
     writeReg(0x0F, channel);
 
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(A7105_TX);
-    CS_HI();
+    A7105_CS_HI();
 
     return res;
 }
 
 u8 DeviceA7105::readReg(u8 reg)
 {
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(0x40 | reg);
     u8 data = PROTOSPI_xfer(0xFF);
-    CS_HI();
+    A7105_CS_HI();
     return data;
 }
 
@@ -102,9 +99,9 @@ u8 DeviceA7105::readData(u8 *data, u8 length)
 
 u8 DeviceA7105::strobe(u8 state)
 {
-    CS_LO();
+    A7105_CS_LO();
     u8 res = PROTOSPI_xfer(state);
-    CS_HI();
+    A7105_CS_HI();
     return res;
 }
 
@@ -173,11 +170,11 @@ int DeviceA7105::reset()
 
 void DeviceA7105::writeID(u32 id)
 {
-    CS_LO();
+    A7105_CS_LO();
     PROTOSPI_xfer(0x06);
     PROTOSPI_xfer((id >> 24) & 0xFF);
     PROTOSPI_xfer((id >> 16) & 0xFF);
     PROTOSPI_xfer((id >> 8) & 0xFF);
     PROTOSPI_xfer((id >> 0) & 0xFF);
-    CS_HI();
+    A7105_CS_HI();
 }

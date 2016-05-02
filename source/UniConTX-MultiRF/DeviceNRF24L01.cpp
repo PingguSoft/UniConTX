@@ -16,6 +16,7 @@
 
 #include <SPI.h>
 #include "DeviceNRF24L01.h"
+#include "Utils.h"
 
 /* Instruction Mnemonics */
 #define R_REGISTER    0x00
@@ -34,109 +35,111 @@
 void DeviceNRF24L01::initialize()
 {
     INIT_COMMON();
-    pinMode(PIN_CSN, OUTPUT);
 
-    CS_HI();
     RF_SEL_2401();
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
+    SPI.setClockDivider(SPI_CLOCK_DIV8);
 
     mRFsetup = 0x0F;
+    for (u8 i = 0; i <= 0x17; i++) {
+        u8 st = readReg(i);
+        printf2(F("%08ld : %s %02X => %02X\n"), millis(), __PRETTY_FUNCTION__, i, st);
+    }
 }
 
 #define PROTOSPI_xfer   SPI.transfer
 
 u8 DeviceNRF24L01::writeReg(u8 reg, u8 data)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(W_REGISTER | (REGISTER_MASK & reg));
     PROTOSPI_xfer(data);
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::writeRegMulti(u8 reg, const u8 *data, u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(W_REGISTER | ( REGISTER_MASK & reg));
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(*data++);
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::writeRegMulti_P(u8 reg, const u8 *data, u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(W_REGISTER | ( REGISTER_MASK & reg));
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(pgm_read_byte(data++));
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::writePayload(u8 *data, u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(W_TX_PAYLOAD);
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(*data++);
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::writePayload_P(const u8 *data, u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(W_TX_PAYLOAD);
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(pgm_read_byte(data++));
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::readReg(u8 reg)
 {
-    CS_LO();
+    NRF_CS_LO();
     PROTOSPI_xfer(R_REGISTER | (REGISTER_MASK & reg));
     u8 data = PROTOSPI_xfer(0xFF);
-    CS_HI();
+    NRF_CS_HI();
     return data;
 }
 
 u8 DeviceNRF24L01::readRegMulti(u8 reg, u8 data[], u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(R_REGISTER | (REGISTER_MASK & reg));
     for(u8 i = 0; i < length; i++) {
         data[i] = PROTOSPI_xfer(0xFF);
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::readPayload(u8 *data, u8 length)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(R_RX_PAYLOAD);
     for(u8 i = 0; i < length; i++) {
         data[i] = PROTOSPI_xfer(0xFF);
     }
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
 u8 DeviceNRF24L01::strobe(u8 state)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(state);
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 
@@ -152,10 +155,10 @@ u8 DeviceNRF24L01::flushRx()
 
 u8 DeviceNRF24L01::activate(u8 code)
 {
-    CS_LO();
+    NRF_CS_LO();
     u8 res = PROTOSPI_xfer(ACTIVATE);
     PROTOSPI_xfer(code);
-    CS_HI();
+    NRF_CS_HI();
     return res;
 }
 

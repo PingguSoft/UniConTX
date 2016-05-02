@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -65,11 +65,11 @@ void RFProtocolCFlie::sendSearchPacket(void)
         case NRF24L01_BR_250K:
             mDataRate = NRF24L01_BR_1M;
             break;
-            
+
         case NRF24L01_BR_1M:
             mDataRate = NRF24L01_BR_2M;
             break;
-            
+
         case NRF24L01_BR_2M:
             mDataRate = NRF24L01_BR_250K;
             break;
@@ -105,7 +105,7 @@ void RFProtocolCFlie::frac2float(s32 n, float* res)
 void RFProtocolCFlie::sendCmdPacket(void)
 {
     float x_roll, x_pitch, yaw;
-  
+
     // Channels in AETR order
 
     // Roll, aka aileron, float +- 50.0 in degrees
@@ -130,7 +130,7 @@ void RFProtocolCFlie::sendCmdPacket(void)
     // float yaw   = -(float) Channels[3]*400.0/10000;
     s32 f_yaw = -(s32)RFProtocol::getControl(CH_RUDDER) * FRAC_SCALE / (10000 / 400);
     frac2float(f_yaw, &yaw);
-  
+
     // Convert + to X. 181 / 256 = 0.70703125 ~= sqrt(2) / 2
     s32 f_x_roll = (f_roll + f_pitch) * 181 / 256;
     frac2float(f_x_roll, &x_roll);
@@ -187,7 +187,7 @@ void RFProtocolCFlie::init1(void)
 
     // CRC, radio on
     mDev.setTxRxMode(TX_EN);
-    mDev.writeReg(NRF24L01_00_CONFIG, BV(NRF24L01_00_EN_CRC) | BV(NRF24L01_00_CRCO) | BV(NRF24L01_00_PWR_UP)); 
+    mDev.writeReg(NRF24L01_00_CONFIG, BV(NRF24L01_00_EN_CRC) | BV(NRF24L01_00_CRCO) | BV(NRF24L01_00_PWR_UP));
 //    mDev.writeReg(NRF24L01_01_EN_AA, 0x00);               // No Auto Acknowledgement
     mDev.writeReg(NRF24L01_01_EN_AA, 0x01);                 // Auto Acknowledgement for data pipe 0
     mDev.writeReg(NRF24L01_02_EN_RXADDR, 0x01);             // Enable data pipe 0
@@ -196,7 +196,7 @@ void RFProtocolCFlie::init1(void)
 
     mDev.writeReg(NRF24L01_05_RF_CH, mCurRFChan);           // Defined by model id
     mDev.setBitrate(mDataRate);
-    
+
     mDev.setRFPower(getRFPower());
     mDev.writeReg(NRF24L01_07_STATUS, 0x70);                // Clear data ready, data sent, and retransmit
 
@@ -226,7 +226,7 @@ void RFProtocolCFlie::init1(void)
     mDev.writeRegMulti(NRF24L01_0A_RX_ADDR_P0, mRxTxAddrBuf, ADDR_BUF_SIZE);
     mDev.writeRegMulti(NRF24L01_10_TX_ADDR, mRxTxAddrBuf, ADDR_BUF_SIZE);
 
-    printf(F("init1 : %ld\n"), millis());
+    //printf(F("init1 : %ld\n"), millis());
 }
 
 
@@ -237,12 +237,12 @@ u16 RFProtocolCFlie::callState(void)
         sendSearchPacket();
         mState = CFLIE_SEARCH;
         break;
-        
+
     case CFLIE_INIT_DATA:
         sendCmdPacket();
         mState = CFLIE_DATA;
         break;
-        
+
     case CFLIE_SEARCH:
         switch (checkStatus()) {
         case PKT_PENDING:
@@ -296,7 +296,7 @@ int RFProtocolCFlie::getInfo(s8 id, u8 *data)
     u8 size;
 
     size = RFProtocol::getInfo(id, data);
-    if (size == 0) {    
+    if (size == 0) {
         switch (id) {
             case INFO_STATE:
                 *data = mState;

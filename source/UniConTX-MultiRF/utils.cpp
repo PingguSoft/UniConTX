@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -46,17 +46,17 @@ u32 rand32()
 }
 
 #ifdef __DEBUG_PRINTF__
-void printf(char *fmt, ... )
+void printf2(char *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
     va_start (args, fmt );
     vsnprintf(buf, 128, fmt, args);
     va_end (args);
-//    Serial.print(buf);
+    Serial.print(buf);
 }
 
-void printf(const __FlashStringHelper *fmt, ... )
+void printf2(const __FlashStringHelper *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -67,6 +67,6 @@ void printf(const __FlashStringHelper *fmt, ... )
     vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
 #endif
     va_end(args);
-//    Serial.print(buf);
+    Serial.print(buf);
 }
 #endif

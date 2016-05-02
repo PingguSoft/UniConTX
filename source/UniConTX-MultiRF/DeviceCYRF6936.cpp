@@ -20,9 +20,6 @@
 void DeviceCYRF6936::initialize()
 {
     INIT_COMMON();
-    pinMode(PIN_CSN, OUTPUT);
-
-    CS_HI();
 
     RF_SEL_6936();
     SPI.begin();
@@ -35,60 +32,60 @@ void DeviceCYRF6936::initialize()
 
 u8 DeviceCYRF6936::writeReg(u8 reg, u8 data)
 {
-    CS_LO();
+    CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(0x80 | reg);
     PROTOSPI_xfer(data);
-    CS_HI();
+    CYRF_CS_HI();
     return res;
 }
 
 u8 DeviceCYRF6936::writeRegMulti(u8 reg, const u8 *data, u8 length)
 {
-    CS_LO();
+    CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(*data++);
     }
-    CS_HI();
+    CYRF_CS_HI();
     return res;
 }
 
 u8 DeviceCYRF6936::writeRegMulti_P(u8 reg, const u8 *data, u8 length)
 {
-    CS_LO();
+    CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
         PROTOSPI_xfer(pgm_read_byte(data++));
     }
-    CS_HI();
+    CYRF_CS_HI();
     return res;
 }
 
 u8 DeviceCYRF6936::readReg(u8 reg)
 {
-    CS_LO();
+    CYRF_CS_LO();
     PROTOSPI_xfer(reg);
     u8 data = PROTOSPI_xfer(0xFF);
-    CS_HI();
+    CYRF_CS_HI();
     return data;
 }
 
 u8 DeviceCYRF6936::readRegMulti(u8 reg, u8 *data, u8 length)
 {
-    CS_LO();
+    CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(reg);
     for(u8 i = 0; i < length; i++) {
         *data++ = PROTOSPI_xfer(0xFF);
     }
-    CS_HI();
+    CYRF_CS_HI();
     return res;
 }
 
 u8 DeviceCYRF6936::strobe(u8 state)
 {
-    CS_LO();
+    CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(state);
-    CS_HI();
+    CYRF_CS_HI();
     return res;
 }
 
@@ -176,12 +173,12 @@ void DeviceCYRF6936::setDataCode(const u8 *datacodes, u8 len)
 
 void DeviceCYRF6936::writePreamble(u32 preamble)
 {
-    CS_LO();
+    CYRF_CS_LO();
     PROTOSPI_xfer(0x80 | 0x24);
     PROTOSPI_xfer(preamble & 0xff);
     PROTOSPI_xfer((preamble >> 8) & 0xff);
     PROTOSPI_xfer((preamble >> 16) & 0xff);
-    CS_HI();
+    CYRF_CS_HI();
 }
 
 void DeviceCYRF6936::startReceive()

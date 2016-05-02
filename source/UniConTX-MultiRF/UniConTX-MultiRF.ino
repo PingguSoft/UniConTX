@@ -29,7 +29,7 @@
 #include "RFProtocolDevo.h"
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
-#include "RCRcvrPWM.h"
+#include "RCRcvrPPM.h"
 
 #define FW_VERSION  0x0120
 
@@ -37,7 +37,7 @@ static u8 mBaudAckLen;
 static u8 mBaudChkCtr;
 static u8 mBaudAckStr[12];
 static RFProtocol *mRFProto = NULL;
-static RCRcvr *mRcvr = NULL;
+static RCRcvrPPM  mRcvr;
 
 struct Config {
     u32 dwSignature;
@@ -48,19 +48,7 @@ struct Config {
 
 static void initReceiver(u32 id)
 {
-    // receiver
-    if (mRcvr) {
-        mRcvr->close();
-        delete mRcvr;
-        mRcvr = NULL;
-    }
-    switch(RFProtocol::getRcvr(id)) {
-        case RFProtocol::RCVR_PWM:
-            mRcvr = new RCRcvrPWM();
-            break;
-    }
-    if (mRcvr)
-        mRcvr->init();
+
 }
 
 static u8 initProtocol(u32 id)
@@ -104,11 +92,10 @@ static u8 initProtocol(u32 id)
         }
         break;
 
-#if 1
         case RFProtocol::TX_CYRF6936:
             mRFProto = new RFProtocolDevo(id);
             ret = 1;
-        break;
+            break;
 
         case RFProtocol::TX_A7105: {
             ret = 1;
@@ -127,17 +114,23 @@ static u8 initProtocol(u32 id)
             }
         }
         break;
-#endif
     }
     return ret;
 }
 
 void setup()
 {
-    Serial.begin(100000);
+    Serial.begin(57600);
 
     struct Config conf;
     EEPROM.get(0, conf);
+
+    mRcvr.init();
+
+    conf.dwSignature = 0xCAFEBABE;
+    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
+    conf.dwConID     = 0x12345678;
+    conf.ucPower     = TXPOWER_100mW;
 
     if (conf.dwSignature == 0xCAFEBABE) {
         initProtocol(conf.dwProtoID);
@@ -151,17 +144,18 @@ void setup()
 
 void loop()
 {
-#if 1
+#if 0
     if (mRFProto) {
-        if (mRcvr) {
-            mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getChCnt());
-        }
+        mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
     }
 #else
-    if (mRcvr) {
-        mSerial.sendString("%4d %4d %4d %d\n", mRcvr->getRC(4), mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getChCnt());
-        delay(100);
+    static u32 lastTS;
+    u32 ts = millis();
+    if (ts - lastTS > 200) {
+        printf2("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
+            mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
+        lastTS = ts;
     }
 #endif
 }

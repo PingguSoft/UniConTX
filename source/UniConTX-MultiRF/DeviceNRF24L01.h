@@ -98,12 +98,6 @@ enum {
 
 class DeviceNRF24L01
 {
-//    #define PIN_IRQ       2
-    #define PIN_CSN       A6
-
-    #define CS_HI() digitalWrite(PIN_CSN, HIGH);
-    #define CS_LO() digitalWrite(PIN_CSN, LOW);
-
 public:
     void initialize();
     int  reset();

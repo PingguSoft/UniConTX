@@ -13,37 +13,29 @@
  see <http://www.gnu.org/licenses/>
 */
 
+#ifndef _RCVR_PPM_H_
+#define _RCVR_PPM_H_
+#include <Arduino.h>
+#include <avr/pgmspace.h>
+#include "Common.h"
+#include "RCRcvr.h"
+#include "SerialProtocol.h"
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+class RCRcvrPPM : public RCRcvr
+{
 
-#include <stdint.h>
-#include <string.h>
-#include <inttypes.h>
+public:
+    RCRcvrPPM():RCRcvr() { }
+    ~RCRcvrPPM()  { close(); }
 
 
-//Magic macro to check enum size
-//#define ctassert(n,e) extern unsigned char n[(e)?0:-1]
-#define ctassert(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]
+    virtual void init(void);
+    virtual void close(void);
+    virtual s16  getRC(u8 ch);
+    virtual s16 *getRCs(void);
+    virtual u8   getChCnt(void);
 
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef uint8_t u8;
-//typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-#ifndef NULL
-#define NULL    0
-#endif
-
-#ifndef TRUE
-#define TRUE    1
-#endif
-
-#ifndef FALSE
-#define FALSE   0
-#endif
+private:
+};
 
 #endif

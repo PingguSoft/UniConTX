@@ -31,6 +31,8 @@
 
 #define PROTO_OPT_X5C_X2    0x01
 
+#define __PRINT_FUNC__      printf2(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+
 enum {
     SYMAX_INIT1 = 0,
     SYMAX_BIND2,
@@ -259,6 +261,7 @@ void RFProtocolSyma::init1(void)
     u8 val;
     u8 bitrate;
 
+    __PRINT_FUNC__;
     mDev.initialize();
     mDev.setTxRxMode(TX_EN);
     mDev.readReg(NRF24L01_07_STATUS);
@@ -304,6 +307,7 @@ static const PROGMEM u8 CHANS_BIND_X5C[] = { 0x27, 0x1b, 0x39, 0x28, 0x24, 0x22,
 
 void RFProtocolSyma::init2(void)
 {
+    __PRINT_FUNC__;
     mDev.flushTx();
     mDev.writeReg(NRF24L01_05_RF_CH, 0x08);
     mDev.writePayload_P(FIRST_PACKET, sizeof(FIRST_PACKET));
@@ -325,6 +329,7 @@ static const PROGMEM u8 CHANS_DATA_X5C[] = {0x1d, 0x2f, 0x26, 0x3d, 0x15, 0x2b, 
                                             0x27, 0x2c, 0x1c, 0x3e, 0x39, 0x2d, 0x22};
 void RFProtocolSyma::init3(void)
 {
+    __PRINT_FUNC__;
     if (getProtocolOpt() == PROTO_OPT_X5C_X2) {
       mRFChanCnt = sizeof(CHANS_DATA_X5C);
       memcpy_P(mRFChanBufs, CHANS_DATA_X5C, mRFChanCnt);
@@ -343,6 +348,7 @@ static const PROGMEM u8 START_CHANS_3[] = {0x1a, 0x3a, 0x12, 0x32};
 // channels determined by last byte of tx address
 void RFProtocolSyma::setRFChannel(u8 address)
 {
+    __PRINT_FUNC__;
     u8  laddress = address & 0x1f;
     u8  i;
     u32 *pchans = (u32 *)mRFChanBufs;   // avoid compiler warning
@@ -407,6 +413,7 @@ u16 RFProtocolSyma::callState(void)
 
 int RFProtocolSyma::init(void)
 {
+    __PRINT_FUNC__;
     mPacketCtr = 0;
 
     init1();

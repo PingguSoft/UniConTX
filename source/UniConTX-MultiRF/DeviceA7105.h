@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -95,10 +95,6 @@ enum A7105_MASK {
 
 class DeviceA7105
 {
-    #define PIN_CSN       A1
-    #define CS_HI() digitalWrite(PIN_CSN, HIGH);
-    #define CS_LO() digitalWrite(PIN_CSN, LOW);
-    
 public:
     void initialize();
     int  reset();
@@ -111,7 +107,7 @@ public:
     void setTxRxMode(enum TXRX_State);
     void writeID(u32 id);
     u8   strobe(u8 state);
-    
+
 // To enable radio transmit after WritePayload you need to turn the radio
 //void PulseCE();
 
