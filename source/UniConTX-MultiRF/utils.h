@@ -34,3 +34,5 @@ void printf2(const __FlashStringHelper *fmt, ... );
 #define printf2(...)
 #endif
 #endif
+
+void dump(char *name, u8 *data, u16 cnt);

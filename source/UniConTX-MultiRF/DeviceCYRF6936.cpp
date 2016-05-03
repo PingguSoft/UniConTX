@@ -16,16 +16,18 @@
 
 #include <SPI.h>
 #include "DeviceCYRF6936.h"
+#include "Utils.h"
 
 void DeviceCYRF6936::initialize()
 {
     INIT_COMMON();
+    RF_SEL_6936();    
+    CYRF_RST_LO();
 
-    RF_SEL_6936();
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
+    SPI.setClockDivider(SPI_CLOCK_DIV8);
 }
 
 #define PROTOSPI_xfer   SPI.transfer
@@ -91,23 +93,32 @@ u8 DeviceCYRF6936::strobe(u8 state)
 
 u8 DeviceCYRF6936::setRFPower(u8 power)
 {
-    u8 val = readReg(0x03) & 0xF8;
-    writeReg(0x03, val | (power & 0x07));
+    u8 val = readReg(CYRF_03_TX_CFG) & 0xF8;
+    writeReg(CYRF_03_TX_CFG, val | (power & 0x07));
 
     return val;
 }
 
 void DeviceCYRF6936::setTxRxMode(enum TXRX_State mode)
 {
-    if(mode == TX_EN) {
-        writeReg(0x0E,0x20);
+    u8 mod;
+    u8 gpio;
+    
+   if(mode == TX_EN) {
+        mod  = 0x28;
+        gpio = 0x80;
         RFX_TX();
     } else if (mode == RX_EN) {
-        writeReg(0x0E,0x80);
+        mod  = 0x2C;
+        gpio = 0x20;
         RFX_RX();
     } else {
+        mod  = 0x24;
+        gpio = 0x00;
         RFX_IDLE();
     }
+    writeReg(CYRF_0F_XACT_CFG,  mod);
+    writeReg(CYRF_0E_GPIO_CTRL, gpio);    
 }
 
 int DeviceCYRF6936::reset()
@@ -115,11 +126,9 @@ int DeviceCYRF6936::reset()
     writeReg(CYRF_1D_MODE_OVERRIDE, 0x01);
     delay(200);
     /* Reset the CYRF chip */
-
     writeReg(CYRF_0C_XTAL_CTRL, 0xC0); //Enable XOUT as GPIO
     writeReg(CYRF_0D_IO_CFG, 0x04); //Enable PACTL as GPIO
     setTxRxMode(TXRX_OFF);
-
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
@@ -127,23 +136,23 @@ int DeviceCYRF6936::reset()
 void DeviceCYRF6936::readMfgID(u8 *data)
 {
     /* Fuses power on */
-    writeReg(0x25, 0xFF);
+    writeReg(CYRF_25_MFG_ID, 0xFF);
 
-    readRegMulti(0x25, data, 6);
+    readRegMulti(CYRF_25_MFG_ID, data, 6);
 
     /* Fuses power off */
-    writeReg(0x25, 0x00);
+    writeReg(CYRF_25_MFG_ID, 0x00);
 }
 
 void DeviceCYRF6936::setRFChannel(u8 ch)
 {
-    writeReg(0x00, ch);
+    writeReg(CYRF_00_CHANNEL, ch);
 }
 
 void DeviceCYRF6936::setCRCSeed(u16 crc)
 {
-    writeReg(0x15,crc & 0xff);
-    writeReg(0x16,crc >> 8);
+    writeReg(CYRF_15_CRC_SEED_LSB,crc & 0xff);
+    writeReg(CYRF_16_CRC_SEED_MSB,crc >> 8);
 }
 
 /*
@@ -154,21 +163,21 @@ void DeviceCYRF6936::setSOPCode(const u8 *sopcodes)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < 8; i++) WriteRegister)0x23, sopcodes[i];
-    writeRegMulti(0x22, sopcodes, 8);
+    writeRegMulti(CYRF_22_SOP_CODE, sopcodes, 8);
 }
 
 void DeviceCYRF6936::setSOPCode_P(const u8 *sopcodes)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < 8; i++) WriteRegister)0x23, sopcodes[i];
-    writeRegMulti_P(0x22, sopcodes, 8);
+    writeRegMulti_P(CYRF_22_SOP_CODE, sopcodes, 8);
 }
 
 void DeviceCYRF6936::setDataCode(const u8 *datacodes, u8 len)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < len; i++) WriteRegister)0x23, datacodes[i];
-    writeRegMulti(0x23, datacodes, len);
+    writeRegMulti(CYRF_23_DATA_CODE, datacodes, len);
 }
 
 void DeviceCYRF6936::writePreamble(u32 preamble)
@@ -183,15 +192,15 @@ void DeviceCYRF6936::writePreamble(u32 preamble)
 
 void DeviceCYRF6936::startReceive()
 {
-    writeReg(0x05,0x87);
+    writeReg(CYRF_05_RX_CTRL, 0x87);
 }
 
 u8 DeviceCYRF6936::writePayload(const u8 *data, u8 length)
 {
     u8 res = writeReg(CYRF_01_TX_LENGTH, length);
-    writeReg(0x02, 0x40);
-    writeRegMulti(0x20, data, length);
-    writeReg(0x02, 0xBF);
+    writeReg(CYRF_02_TX_CTRL, 0x40);
+    writeRegMulti(CYRF_20_TX_BUFFER, data, length);
+    writeReg(CYRF_02_TX_CTRL, 0xBF);
 
     return res;
 }
@@ -199,16 +208,16 @@ u8 DeviceCYRF6936::writePayload(const u8 *data, u8 length)
 u8 DeviceCYRF6936::writePayload_P(const u8 *data, u8 length)
 {
     u8 res = writeReg(CYRF_01_TX_LENGTH, length);
-    writeReg(0x02, 0x40);
-    writeRegMulti_P(0x20, data, length);
-    writeReg(0x02, 0xBF);
+    writeReg(CYRF_02_TX_CTRL, 0x40);
+    writeRegMulti_P(CYRF_20_TX_BUFFER, data, length);
+    writeReg(CYRF_02_TX_CTRL, 0xBF);
 
     return res;
 }
 
 u8 DeviceCYRF6936::readPayload(u8 *data, u8 length)
 {
-    return readRegMulti(0x21, data, length);
+    return readRegMulti(CYRF_21_RX_BUFFER, data, length);
 }
 
 u8 DeviceCYRF6936::readRSSI(u32 dodummyread)
@@ -216,12 +225,12 @@ u8 DeviceCYRF6936::readRSSI(u32 dodummyread)
     u8 result;
 
     if(dodummyread) {
-        readReg(0x13);
+        readReg(CYRF_13_RSSI);
     }
 
-    result = readReg(0x13);
+    result = readReg(CYRF_13_RSSI);
     if(result & 0x80) {
-        result = readReg(0x13);
+        result = readReg(CYRF_13_RSSI);
     }
     return (result & 0x0F);
 }
@@ -248,10 +257,11 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
     delay(1000);
     for(i = 0; i < NUM_FREQ; i++) {
         setRFChannel(i);
-        readReg(0x13);
+        readReg(CYRF_13_RSSI);
         startReceive();
         delay(10);
-        rssi[i] = readReg(0x13);
+        rssi[i] = readReg(CYRF_13_RSSI);
+        printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
     }
 
     for (i = 0; i < len; i++) {

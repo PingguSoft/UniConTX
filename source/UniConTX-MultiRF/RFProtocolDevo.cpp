@@ -18,7 +18,7 @@
 #include "utils.h"
 
 #define PKTS_PER_CHANNEL        4
-#define MAX_BIND_COUNT     0x1388
+#define MAX_BIND_COUNT       0x1388
 #define TELEMETRY_ENABLE     0x30
 
 #define PACKET_PERIOD_uS     1200
@@ -39,6 +39,8 @@ enum PktState {
     DEVO_BOUND_9,
     DEVO_BOUND_10,
 };
+
+#define __PRINT_FUNC__      printf2(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 
 static const PROGMEM u8 SOPCODES[][8] = {
     /* Note these are in order transmitted (LSB 1st) */
@@ -136,7 +138,7 @@ void RFProtocolDevo::buildDataPacket(void)
     s32 value;
     u8 i;
     u8 sign = 0x0b;
-    
+
     mPacketBuf[0] = (mConChanCnt << 4) | (0x0b + mConChanIdx);
     for (i = 0; i < 4; i++) {
         value = (s32)getControlByOrder(i) * 0x640 / CHAN_MAX_VALUE;
@@ -307,6 +309,7 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
     CYRF_1E_RX_OVERRIDE,    0x10,
     CYRF_1F_TX_OVERRIDE,    0x00,
     CYRF_01_TX_LENGTH,      0x10,
+    CYRF_0C_XTAL_CTRL,      0xC0,
     CYRF_0F_XACT_CFG,       0x10,
     CYRF_27_CLK_OVERRIDE,   0x02,
     CYRF_28_CLK_EN,         0x02,
@@ -316,6 +319,7 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
 void RFProtocolDevo::init1(void)
 {
     /* Initialise CYRF chip */
+    mDev.initialize();
     mDev.reset();
 
     mDev.readMfgID(mMfgIDBuf);
@@ -328,7 +332,7 @@ void RFProtocolDevo::init1(void)
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) / 2; i++) {
         reg = pgm_read_byte(TBL_INIT_REGS + i * 2);
         val = pgm_read_byte(TBL_INIT_REGS + i * 2 + 1);
-        if (i == 1)
+        if (reg == CYRF_03_TX_CFG)
             val = val | getRFPower();
         mDev.writeReg(reg, val);
     }
@@ -386,7 +390,7 @@ void RFProtocolDevo::buildPacket(void)
             
         case DEVO_BOUND_10:
             buildBeaconPacket(mConChanCnt > 8 ? failsafe_pkt : 0);
-            failsafe_pkt = failsafe_pkt ? 0 : 1;
+            failsafe_pkt = !failsafe_pkt;
             buildScramblePacket();
             mState = DEVO_BOUND_1;
             break;
@@ -473,6 +477,8 @@ u16 RFProtocolDevo::callState2(void)
 u16 RFProtocolDevo::callState(void)
 {
     int i = 0;
+
+    //printf2("callState state:%d, bind ctr:%d, packet ctr:%d\n", mState, mBindCtr, mPacketCtr);
     
     if (mTxState == 0) {
         mTxState = 1;
@@ -480,12 +486,15 @@ u16 RFProtocolDevo::callState(void)
         mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
         return PACKET_PERIOD_uS;
     }
-    
+
     mTxState = 0;
-    while (! (mDev.readReg(0x04) & 0x02)) {
+    u8 irq;
+    do {
+        irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
         if(++i > NUM_WAIT_LOOPS)
-            return PACKET_PERIOD_uS;
-    }
+            return PACKET_PERIOD_uS;        
+    } while (irq & 0x02);
+
     if (mState == DEVO_BOUND) {
         /* exit binding mState */
         mState = DEVO_BOUND_3;
@@ -496,6 +505,7 @@ u16 RFProtocolDevo::callState(void)
         mDev.writeReg(CYRF_03_TX_CFG, 0x08 | getRFPower());
         mCurRFChPtr = (mCurRFChPtr == &mRFChanBufs[2]) ? mRFChanBufs : (mCurRFChPtr + 1);
         mDev.setRFChannel(*mCurRFChPtr);
+        //printf2("callState ch:%d\n", *mCurRFChPtr);
     }
     return PACKET_PERIOD_uS;
 }
@@ -510,14 +520,18 @@ int RFProtocolDevo::init(void)
 //    memset(&Telemetry, 0, sizeof(Telemetry));
 
     mDev.setRFChannel(*mCurRFChPtr);
-    mPacketCtr = 0;
+
+    //num_channels = ((Model.num_channels + 3) >> 2) * 4;
+    mConChanCnt = 8;
+    mPacketCtr  = 0;
     mConChanIdx = 0;
-    mTxState = 0;
+    mTxState    = 0;
 
     if(1) {  // ! Model.mFixedID
         mFixedID = ((u32)(mRFChanBufs[0] ^ mMfgIDBuf[0] ^ mMfgIDBuf[3]) << 16)
                  | ((u32)(mRFChanBufs[1] ^ mMfgIDBuf[1] ^ mMfgIDBuf[4]) << 8)
                  | ((u32)(mRFChanBufs[2] ^ mMfgIDBuf[2] ^ mMfgIDBuf[5]) << 0);
+
         mFixedID = mFixedID % 1000000;
         mBindCtr = MAX_BIND_COUNT;
         mState   = DEVO_BIND;

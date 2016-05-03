@@ -43,10 +43,6 @@ void DeviceNRF24L01::initialize()
     SPI.setClockDivider(SPI_CLOCK_DIV8);
 
     mRFsetup = 0x0F;
-    for (u8 i = 0; i <= 0x17; i++) {
-        u8 st = readReg(i);
-        printf2(F("%08ld : %s %02X => %02X\n"), millis(), __PRETTY_FUNCTION__, i, st);
-    }
 }
 
 #define PROTOSPI_xfer   SPI.transfer

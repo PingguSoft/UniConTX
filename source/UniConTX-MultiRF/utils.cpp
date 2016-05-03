@@ -70,3 +70,34 @@ void printf2(const __FlashStringHelper *fmt, ... )
     Serial.print(buf);
 }
 #endif
+
+
+void dump(char *name, u8 *data, u16 cnt)
+{
+    u8  i;
+    u8  b;
+    u16 addr = 0;
+
+    printf2("-- %s buf size : %d -- \n", name, cnt);
+    while (cnt) {
+        printf2("%08x - ", addr);
+
+        for (i = 0; (i < 16) && (i < cnt); i ++) {
+            b = *(data + i);
+            printf2("%02x ", b);
+        }
+
+        printf2(" : ");
+        for (i = 0; (i < 16) && (i < cnt); i ++) {
+            b = *(data + i);
+            if ((b > 0x1f) && (b < 0x7f))
+                printf2("%c", b);
+            else
+                printf2(".");
+        }
+        printf2("\n");
+        data += i;
+        addr += i;
+        cnt  -= i;
+    }
+}

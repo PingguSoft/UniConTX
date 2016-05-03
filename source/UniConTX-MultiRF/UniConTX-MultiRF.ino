@@ -128,7 +128,7 @@ void setup()
     mRcvr.init();
 
     conf.dwSignature = 0xCAFEBABE;
-    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
+    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_100mW;
 
@@ -144,7 +144,7 @@ void setup()
 
 void loop()
 {
-#if 0
+#if 1
     if (mRFProto) {
         mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
