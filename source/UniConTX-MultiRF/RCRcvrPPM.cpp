@@ -34,7 +34,7 @@ void calcPPM();
 s16 RCRcvrPPM::getRC(u8 ch)
 {
     if (ch >= getChCnt())
-        return -500;
+        return 1000;
 
     return sRC[ch];
 }
@@ -51,11 +51,19 @@ u8 RCRcvrPPM::getChCnt(void)
 
 void RCRcvrPPM::init(void)
 {
-    memset(sRC, 0, sizeof(sRC));
-    sRC[0] = -500;  // throttle min
+    for (u8 i = 0; i < sizeof(sRC); i++)
+        sRC[i] = 1500;
+    
+    sRC[0] = 900; // T
+#if 1
+    sRC[4] = 900;
+    sRC[5] = 900;
+    sRC[6] = 900;
+    sRC[7] = 900;
+#endif
 
-    pinMode(PIN_PPM, INPUT);
-    attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
+//    pinMode(PIN_PPM, INPUT);
+//    attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
 
 #if 0
     TCCR1A = 0;
@@ -82,7 +90,7 @@ void calcPPM()
     } else {
         if (ch < CH_CNT - 1) {
             u16 val = constrain(diff, 1000, 2000);
-            sRC[ch++] = map(val, 1000, 2000, -500, 500);
+            sRC[ch++] = val; //map(val, 1000, 2000, -500, 500);
         }
     }
     lastTS = ts;

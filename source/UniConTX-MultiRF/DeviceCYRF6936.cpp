@@ -21,13 +21,17 @@
 void DeviceCYRF6936::initialize()
 {
     INIT_COMMON();
-    RF_SEL_6936();    
-    CYRF_RST_LO();
+    RF_SEL_6936();
 
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV8);
+    SPI.setClockDivider(SPI_CLOCK_DIV2);
+
+    CYRF_RST_HI();
+    delay(100);
+    CYRF_RST_LO();
+    delay(100);
 }
 
 #define PROTOSPI_xfer   SPI.transfer
@@ -46,7 +50,7 @@ u8 DeviceCYRF6936::writeRegMulti(u8 reg, const u8 *data, u8 length)
     CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
-        PROTOSPI_xfer(*data++);
+        PROTOSPI_xfer(data[i]);
     }
     CYRF_CS_HI();
     return res;
@@ -57,7 +61,7 @@ u8 DeviceCYRF6936::writeRegMulti_P(u8 reg, const u8 *data, u8 length)
     CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
-        PROTOSPI_xfer(pgm_read_byte(data++));
+        PROTOSPI_xfer(pgm_read_byte(data + i));
     }
     CYRF_CS_HI();
     return res;
@@ -67,7 +71,7 @@ u8 DeviceCYRF6936::readReg(u8 reg)
 {
     CYRF_CS_LO();
     PROTOSPI_xfer(reg);
-    u8 data = PROTOSPI_xfer(0xFF);
+    u8 data = PROTOSPI_xfer(0);
     CYRF_CS_HI();
     return data;
 }
@@ -77,7 +81,7 @@ u8 DeviceCYRF6936::readRegMulti(u8 reg, u8 *data, u8 length)
     CYRF_CS_LO();
     u8 res = PROTOSPI_xfer(reg);
     for(u8 i = 0; i < length; i++) {
-        *data++ = PROTOSPI_xfer(0xFF);
+        *data++ = PROTOSPI_xfer(0);
     }
     CYRF_CS_HI();
     return res;
@@ -125,10 +129,19 @@ int DeviceCYRF6936::reset()
 {
     writeReg(CYRF_1D_MODE_OVERRIDE, 0x01);
     delay(200);
+
+    CYRF_RST_HI();
+    delay(100);
+    CYRF_RST_LO();
+    delay(100);
+
     /* Reset the CYRF chip */
     writeReg(CYRF_0C_XTAL_CTRL, 0xC0); //Enable XOUT as GPIO
     writeReg(CYRF_0D_IO_CFG, 0x04); //Enable PACTL as GPIO
     setTxRxMode(TXRX_OFF);
+
+    printf2("RESET !! : %x\n", readReg(CYRF_10_FRAMING_CFG));
+    
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
@@ -159,7 +172,7 @@ void DeviceCYRF6936::setCRCSeed(u16 crc)
  * these are the recommended sop codes from Cypress
  * See "WirelessUSB LP/LPstar and PRoC LP/LPstar Technical Reference Manual"
  */
-void DeviceCYRF6936::setSOPCode(const u8 *sopcodes)
+void DeviceCYRF6936::setSOPCode(u8 *sopcodes)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < 8; i++) WriteRegister)0x23, sopcodes[i];
@@ -173,7 +186,7 @@ void DeviceCYRF6936::setSOPCode_P(const u8 *sopcodes)
     writeRegMulti_P(CYRF_22_SOP_CODE, sopcodes, 8);
 }
 
-void DeviceCYRF6936::setDataCode(const u8 *datacodes, u8 len)
+void DeviceCYRF6936::setDataCode(u8 *datacodes, u8 len)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < len; i++) WriteRegister)0x23, datacodes[i];
@@ -195,12 +208,12 @@ void DeviceCYRF6936::startReceive()
     writeReg(CYRF_05_RX_CTRL, 0x87);
 }
 
-u8 DeviceCYRF6936::writePayload(const u8 *data, u8 length)
+u8 DeviceCYRF6936::writePayload(u8 *data, u8 length)
 {
     u8 res = writeReg(CYRF_01_TX_LENGTH, length);
-    writeReg(CYRF_02_TX_CTRL, 0x40);
+    writeReg(CYRF_02_TX_CTRL, 0x40);    // TX CLR
     writeRegMulti(CYRF_20_TX_BUFFER, data, length);
-    writeReg(CYRF_02_TX_CTRL, 0xBF);
+    writeReg(CYRF_02_TX_CTRL, 0xBF);    // TX GO
 
     return res;
 }
@@ -208,9 +221,9 @@ u8 DeviceCYRF6936::writePayload(const u8 *data, u8 length)
 u8 DeviceCYRF6936::writePayload_P(const u8 *data, u8 length)
 {
     u8 res = writeReg(CYRF_01_TX_LENGTH, length);
-    writeReg(CYRF_02_TX_CTRL, 0x40);
+    writeReg(CYRF_02_TX_CTRL, 0x40);    // TX CLR
     writeRegMulti_P(CYRF_20_TX_BUFFER, data, length);
-    writeReg(CYRF_02_TX_CTRL, 0xBF);
+    writeReg(CYRF_02_TX_CTRL, 0xBF);    // TX GO
 
     return res;
 }
@@ -232,7 +245,7 @@ u8 DeviceCYRF6936::readRSSI(u32 dodummyread)
     if(result & 0x80) {
         result = readReg(CYRF_13_RSSI);
     }
-    return (result & 0x0F);
+    return (result & 0x1F);
 }
 
 //NOTE: This routine will reset the CRC Seed
@@ -260,8 +273,8 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
         readReg(CYRF_13_RSSI);
         startReceive();
         delay(10);
-        rssi[i] = readReg(CYRF_13_RSSI);
-        printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
+        rssi[i] = readReg(CYRF_13_RSSI) & 0x1f;
+        //printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
     }
 
     for (i = 0; i < len; i++) {

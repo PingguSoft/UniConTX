@@ -56,7 +56,7 @@ static const PROGMEM u8 SOPCODES[][8] = {
     /* 9 */ {0x97,0xE5,0x14,0x72,0x7F,0x1A,0x14,0x72}, //0x72141A7F7214E597
 };
 
-void RFProtocolDevo::buildScramblePacket(void)
+void RFProtocolDevo::scramblePacket(void)
 {
     for(u8 i = 0; i < 15; i++) {
         mPacketBuf[i + 1] ^= mMfgIDBuf[i % 4];
@@ -76,6 +76,7 @@ void RFProtocolDevo::addPacketSuffix(void)
     } else {
         bind_state = 0x00;
     }
+   
     mPacketBuf[10] = bind_state | (PKTS_PER_CHANNEL - mPacketCtr - 1);
     mPacketBuf[11] = *(mCurRFChPtr + 1);
     mPacketBuf[12] = *(mCurRFChPtr + 2);
@@ -135,14 +136,15 @@ void RFProtocolDevo::buildBindPacket(void)
 
 void RFProtocolDevo::buildDataPacket(void)
 {
-    s32 value;
+    s16 value;
     u8 i;
     u8 sign = 0x0b;
 
     mPacketBuf[0] = (mConChanCnt << 4) | (0x0b + mConChanIdx);
     for (i = 0; i < 4; i++) {
-        value = (s32)getControlByOrder(i) * 0x640 / CHAN_MAX_VALUE;
-        if(value < 0) {
+        //value = (s32)getControlByOrder(mConChanIdx * 4 + i) * 0x640 / CHAN_MAX_VALUE;
+        value = map(getControlByOrder(mConChanIdx * 4 + i), 900, 2100, -1600, 1600);
+        if (value < 0) {
             value = -value;
             sign |= 1 << (7 - i);
         }
@@ -201,7 +203,7 @@ void RFProtocolDevo::parseTelemetryPacket(u8 *mPacketBuf)
     if((mPacketBuf[0] & 0xF0) != 0x30)
         return;
     const u8 *update = NULL;
-    buildScramblePacket(); //This will unscramble the mPacketBuf
+    scramblePacket(); //This will unscramble the mPacketBuf
     if (mPacketBuf[13] != (mFixedID  & 0xff)
         || mPacketBuf[14] != ((mFixedID >> 8) & 0xff)
         || mPacketBuf[15] != ((mFixedID >> 16) & 0xff))
@@ -283,21 +285,23 @@ void RFProtocolDevo::setBoundSOPCodes(void)
     /* crc == 0 isn't allowed, so use 1 if the math results in 0 */
     
     u8 crc    = (mMfgIDBuf[0] + (mMfgIDBuf[1] >> 6) + mMfgIDBuf[2]);
-    u8 sopidx = (0xff &((mMfgIDBuf[0] << 2) + mMfgIDBuf[1] + mMfgIDBuf[2])) % 10;
+    u8 sopidx = (0xff & ((mMfgIDBuf[0] << 2) + mMfgIDBuf[1] + mMfgIDBuf[2])) % 10;
 
     if(!crc)
         crc = 1;
     mDev.setTxRxMode(TX_EN);
     mDev.setCRCSeed((crc << 8) + crc);
     mDev.setSOPCode_P(SOPCODES[sopidx]);
-    mDev.writeReg(CYRF_03_TX_CFG, 0x08 | getRFPower());
+    mDev.setRFPower(getRFPower());
 }
 
 static const PROGMEM u8 TBL_INIT_REGS[] = {
-    CYRF_1D_MODE_OVERRIDE,  0x38,
+    CYRF_1D_MODE_OVERRIDE,  0x39,
     CYRF_03_TX_CFG,         0x08,
     CYRF_06_RX_CFG,         0x4A,
     CYRF_0B_PWR_CTRL,       0x00,
+    CYRF_0D_IO_CFG,         0x04,
+    CYRF_0E_GPIO_CTRL,      0x20,
     CYRF_10_FRAMING_CFG,    0xA4,
     CYRF_11_DATA32_THOLD,   0x05,
     CYRF_12_DATA64_THOLD,   0x0E,
@@ -332,15 +336,24 @@ void RFProtocolDevo::init1(void)
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) / 2; i++) {
         reg = pgm_read_byte(TBL_INIT_REGS + i * 2);
         val = pgm_read_byte(TBL_INIT_REGS + i * 2 + 1);
-        if (reg == CYRF_03_TX_CFG)
-            val = val | getRFPower();
-        mDev.writeReg(reg, val);
+        if (reg == CYRF_03_TX_CFG) {
+            mDev.setRFPower(getRFPower());
+        } else {
+            mDev.writeReg(reg, val);
+        }
     }
 }
 
 void RFProtocolDevo::setRadioChannels(void)
 {
     mDev.findBestChannels(mRFChanBufs, 3, 4, 4, 80);
+
+    printf2("Radio Channels:");
+    for (u8 i = 0; i < 3; i++) {
+        printf2(" %02x", mRFChanBufs[i]);
+    }
+    printf2("\n");
+
     //Makes code a little easier to duplicate these here
     mRFChanBufs[3] = mRFChanBufs[0];
     mRFChanBufs[4] = mRFChanBufs[1];
@@ -348,18 +361,22 @@ void RFProtocolDevo::setRadioChannels(void)
 
 void RFProtocolDevo::buildPacket(void)
 {
+    printf2("callState state:%d, bind ctr:%d, packet ctr:%d\n", mState, mBindCtr, mPacketCtr);
+    
     switch(mState) {
         case DEVO_BIND:
-            mBindCtr--;
+            if (mBindCtr > 0)
+                mBindCtr--;
             buildBindPacket();
             mState = DEVO_BIND_SENDCH;
             break;
             
         case DEVO_BIND_SENDCH:
-            mBindCtr--;
+            if (mBindCtr > 0)
+                mBindCtr--;
             buildDataPacket();
-            buildScramblePacket();
-            if (mBindCtr <= 0) {
+            scramblePacket();
+            if (mBindCtr == 0) {
                 mState = DEVO_BOUND;
 //                PROTOCOL_SetBindState(0);
             } else {
@@ -378,7 +395,7 @@ void RFProtocolDevo::buildPacket(void)
         case DEVO_BOUND_8:
         case DEVO_BOUND_9:
             buildDataPacket();
-            buildScramblePacket();
+            scramblePacket();
             mState++;
             if (mBindCtr > 0) {
                 mBindCtr--;
@@ -391,10 +408,11 @@ void RFProtocolDevo::buildPacket(void)
         case DEVO_BOUND_10:
             buildBeaconPacket(mConChanCnt > 8 ? failsafe_pkt : 0);
             failsafe_pkt = !failsafe_pkt;
-            buildScramblePacket();
+            scramblePacket();
             mState = DEVO_BOUND_1;
             break;
     }
+    //dump("data", mPacketBuf, MAX_PACKET_SIZE);
     
     mPacketCtr++;
     if(mPacketCtr == PKTS_PER_CHANNEL)
@@ -476,37 +494,33 @@ u16 RFProtocolDevo::callState2(void)
 
 u16 RFProtocolDevo::callState(void)
 {
-    int i = 0;
-
-    //printf2("callState state:%d, bind ctr:%d, packet ctr:%d\n", mState, mBindCtr, mPacketCtr);
-    
     if (mTxState == 0) {
-        mTxState = 1;
         buildPacket();
         mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
-        return PACKET_PERIOD_uS;
-    }
+    } else {
+        u8  irq;
+        int i = 0;
 
-    mTxState = 0;
-    u8 irq;
-    do {
-        irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
-        if(++i > NUM_WAIT_LOOPS)
-            return PACKET_PERIOD_uS;        
-    } while (irq & 0x02);
+        do {
+            irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
+//            printf2("IRQ : %x\n", irq);
+            if(++i > NUM_WAIT_LOOPS)
+                return PACKET_PERIOD_uS;        
+        } while (!(irq & 0x02));
 
-    if (mState == DEVO_BOUND) {
-        /* exit binding mState */
-        mState = DEVO_BOUND_3;
-        setBoundSOPCodes();
+        if (mState == DEVO_BOUND) {
+            /* exit binding mState */
+            mState = DEVO_BOUND_3;
+            setBoundSOPCodes();
+        }
+        if (mPacketCtr == 0) {
+            //Keep tx power updated
+            mDev.setRFPower(getRFPower());
+            mCurRFChPtr = (mCurRFChPtr == &mRFChanBufs[2]) ? mRFChanBufs : (mCurRFChPtr + 1);
+            mDev.setRFChannel(*mCurRFChPtr);
+        }
     }
-    if(mPacketCtr == 0) {
-        //Keep tx power updated
-        mDev.writeReg(CYRF_03_TX_CFG, 0x08 | getRFPower());
-        mCurRFChPtr = (mCurRFChPtr == &mRFChanBufs[2]) ? mRFChanBufs : (mCurRFChPtr + 1);
-        mDev.setRFChannel(*mCurRFChPtr);
-        //printf2("callState ch:%d\n", *mCurRFChPtr);
-    }
+    mTxState = !mTxState;
     return PACKET_PERIOD_uS;
 }
 
@@ -523,8 +537,8 @@ int RFProtocolDevo::init(void)
 
     //num_channels = ((Model.num_channels + 3) >> 2) * 4;
     mConChanCnt = 8;
-    mPacketCtr  = 0;
     mConChanIdx = 0;
+    mPacketCtr  = 0;
     mTxState    = 0;
 
     if(1) {  // ! Model.mFixedID

@@ -92,12 +92,12 @@ public:
     void readMfgID(u8 *data);
     void setRFChannel(u8 ch);
     void setCRCSeed(u16 crc);
-    void setSOPCode(const u8 *sopcodes);
+    void setSOPCode(u8 *sopcodes);
     void setSOPCode_P(const u8 *sopcodes);
-    void setDataCode(const u8 *datacodes, u8 len);
+    void setDataCode(u8 *datacodes, u8 len);
     void writePreamble(u32 preamble);
     void startReceive();
-    u8   writePayload(const u8 *data, u8 length);
+    u8   writePayload(u8 *data, u8 length);
     u8   writePayload_P(const u8 *data, u8 length);
     u8   readPayload(u8 *data, u8 length);
     u8   readRSSI(u32 dodummyread);

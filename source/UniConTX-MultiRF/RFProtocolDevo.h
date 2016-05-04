@@ -41,7 +41,7 @@ public:
 
 private:
     void init1(void);
-    void buildScramblePacket(void);
+    void scramblePacket(void);
     void addPacketSuffix(void);
     void buildBeaconPacket(int upper);
     void buildBindPacket(void);
@@ -55,7 +55,7 @@ private:
 
 // variables
     DeviceCYRF6936  mDev;
-    u16  mBindCtr;
+    s16  mBindCtr;
     u8   mRFChanBufs[MAX_RF_CHANNELS];
     u8   mPacketBuf[MAX_PACKET_SIZE];
     u8   mRxTxAddrBuf[ADDR_BUF_SIZE];

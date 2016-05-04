@@ -138,7 +138,7 @@ void RFProtocol::startState(unsigned long period)
     mTmrState = after(period);
 }
 
-// A E T R : deviation channel order
+// E A T R : deviation channel order
 static const PROGMEM u8 TBL_ORDERS[4] = {
     RFProtocol::CH_AILERON,  RFProtocol::CH_ELEVATOR, 
     RFProtocol::CH_THROTTLE, RFProtocol::CH_RUDDER };
