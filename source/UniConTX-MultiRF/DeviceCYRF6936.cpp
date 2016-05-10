@@ -26,7 +26,7 @@ void DeviceCYRF6936::initialize()
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
+    //SPI.setClockDivider(SPI_CLOCK_DIV2);
 
     CYRF_RST_HI();
     delay(100);
@@ -109,17 +109,17 @@ void DeviceCYRF6936::setTxRxMode(enum TXRX_State mode)
     u8 gpio;
     
    if(mode == TX_EN) {
-        mod  = 0x28;
-        gpio = 0x80;
         RFX_TX();
+        mod  = 0x28;        // SYNTH MODE (8) = TX
+        gpio = 0x20;        // XOUT(7)=1, PACTL(5)=0
     } else if (mode == RX_EN) {
-        mod  = 0x2C;
-        gpio = 0x20;
         RFX_RX();
+        mod  = 0x2C;        // SYNTH MODE (C) = RX
+        gpio = 0x80;        // XOUT(7)=0, PACTL(5)=1
     } else {
-        mod  = 0x24;
-        gpio = 0x00;
         RFX_IDLE();
+        mod  = 0x24;        // IDLE
+        gpio = 0x00;
     }
     writeReg(CYRF_0F_XACT_CFG,  mod);
     writeReg(CYRF_0E_GPIO_CTRL, gpio);    
@@ -130,18 +130,22 @@ int DeviceCYRF6936::reset()
     writeReg(CYRF_1D_MODE_OVERRIDE, 0x01);
     delay(200);
 
+/*
     CYRF_RST_HI();
     delay(100);
     CYRF_RST_LO();
     delay(100);
-
+*/
     /* Reset the CYRF chip */
-    writeReg(CYRF_0C_XTAL_CTRL, 0xC0); //Enable XOUT as GPIO
-    writeReg(CYRF_0D_IO_CFG, 0x04); //Enable PACTL as GPIO
+    writeReg(CYRF_0C_XTAL_CTRL, 0xC0);  // Enable XOUT as GPIO
+    writeReg(CYRF_0D_IO_CFG, 0x04);     // Enable PACTL as GPIO
     setTxRxMode(TXRX_OFF);
 
+    u8 data[8];
+    readRegMulti(CYRF_22_SOP_CODE, data, 8);
     printf2("RESET !! : %x\n", readReg(CYRF_10_FRAMING_CFG));
-    
+    dump("SOP", data, 8);
+
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
@@ -155,6 +159,8 @@ void DeviceCYRF6936::readMfgID(u8 *data)
 
     /* Fuses power off */
     writeReg(CYRF_25_MFG_ID, 0x00);
+
+    dump("MFG", data, 6);
 }
 
 void DeviceCYRF6936::setRFChannel(u8 ch)
@@ -164,8 +170,8 @@ void DeviceCYRF6936::setRFChannel(u8 ch)
 
 void DeviceCYRF6936::setCRCSeed(u16 crc)
 {
-    writeReg(CYRF_15_CRC_SEED_LSB,crc & 0xff);
-    writeReg(CYRF_16_CRC_SEED_MSB,crc >> 8);
+    writeReg(CYRF_15_CRC_SEED_LSB, crc & 0xff);
+    writeReg(CYRF_16_CRC_SEED_MSB, crc >> 8);
 }
 
 /*
@@ -273,8 +279,8 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
         readReg(CYRF_13_RSSI);
         startReceive();
         delay(10);
-        rssi[i] = readReg(CYRF_13_RSSI) & 0x1f;
-        //printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
+        rssi[i] = readReg(CYRF_13_RSSI);
+        printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
     }
 
     for (i = 0; i < len; i++) {

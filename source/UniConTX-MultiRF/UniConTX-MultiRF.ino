@@ -146,7 +146,7 @@ void loop()
 {
 #if 1
     if (mRFProto) {
-        mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
+        //mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
     }
 #else

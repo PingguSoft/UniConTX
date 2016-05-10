@@ -63,7 +63,6 @@ private:
 
     u8   mPacketCtr;    
     u8   mConChanIdx;
-    u8   mConChanCnt;
     u8   mPacketSize;
     u8   mState;
     u8   mTxState;

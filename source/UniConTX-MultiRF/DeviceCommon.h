@@ -59,7 +59,7 @@
 // 4052 RF switch
 #define PIN_RF_PE1      A3
 #define PIN_RF_PE2      A2
-#define RF_SEL_CFG()    pinMode(PIN_RF_PE1, OUTPUT); pinMode(PIN_RF_PE2, OUTPUT);
+#define RF_SEL_CFG()    pinMode(PIN_RF_PE1, OUTPUT);    pinMode(PIN_RF_PE2, OUTPUT);
 #define RF_SEL_7105()   digitalWrite(PIN_RF_PE1, LOW);  digitalWrite(PIN_RF_PE2, LOW);
 #define RF_SEL_2500()   digitalWrite(PIN_RF_PE1, LOW);  digitalWrite(PIN_RF_PE2, HIGH);
 #define RF_SEL_2401()   digitalWrite(PIN_RF_PE1, HIGH); digitalWrite(PIN_RF_PE2, LOW);
@@ -69,9 +69,9 @@
 #define INIT_COMMON()   RFX_CFG();      RFX_IDLE();     \
                         RF_SEL_CFG();   RF_SEL_7105();  \
                         A7105_CS_CFG(); A7105_CS_HI();  \
+                        NRF_CC_CFG();   CC_CS_HI();     \
                         NRF_CS_CFG();   NRF_CS_HI();    \
-                        CYRF_CS_CFG();  CYRF_CS_HI();   CYRF_RST_HI();  \
-                        NRF_CC_CFG();   CC_CS_HI();
+                        CYRF_CS_CFG();  CYRF_CS_HI();   CYRF_RST_HI();
 
 typedef enum TxPower {
     TXPOWER_100uW,

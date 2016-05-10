@@ -17,7 +17,8 @@
 #include "RFProtocolDevo.h"
 #include "utils.h"
 
-#define PKTS_PER_CHANNEL        4
+#define CHANNEL_CNT          8
+#define PKTS_PER_CHANNEL     4
 #define MAX_BIND_COUNT       0x1388
 #define TELEMETRY_ENABLE     0x30
 
@@ -91,7 +92,7 @@ void RFProtocolDevo::buildBeaconPacket(int upper)
     int max    = 8;
     int offset = 0;
 
-    mPacketBuf[0] = ((mConChanCnt << 4) | 0x07);    
+    mPacketBuf[0] = ((CHANNEL_CNT << 4) | 0x07);    
     if (upper) {
         mPacketBuf[0] += 1;
         max = 4;
@@ -100,7 +101,7 @@ void RFProtocolDevo::buildBeaconPacket(int upper)
 
     for(int i = 0; i < max; i++) {
 #ifdef BOGUS
-        if (i + offset < Model.mConChanCnt && Model.limits[i+offset].flags & CH_FAILSAFE_EN) {
+        if (i + offset < Model.CHANNEL_CNT && Model.limits[i+offset].flags & CH_FAILSAFE_EN) {
             enable |= 0x80 >> i;
             mPacketBuf[i+1] = Model.limits[i+offset].failsafe;
         } else {
@@ -116,7 +117,7 @@ void RFProtocolDevo::buildBeaconPacket(int upper)
 
 void RFProtocolDevo::buildBindPacket(void)
 {
-    mPacketBuf[0] = (mConChanCnt << 4) | 0x0a;
+    mPacketBuf[0] = (CHANNEL_CNT << 4) | 0x0a;
     mPacketBuf[1] = mBindCtr & 0xff;
     mPacketBuf[2] = (mBindCtr >> 8);
     mPacketBuf[3] = *mCurRFChPtr;
@@ -140,7 +141,7 @@ void RFProtocolDevo::buildDataPacket(void)
     u8 i;
     u8 sign = 0x0b;
 
-    mPacketBuf[0] = (mConChanCnt << 4) | (0x0b + mConChanIdx);
+    mPacketBuf[0] = (CHANNEL_CNT << 4) | (0x0b + mConChanIdx);
     for (i = 0; i < 4; i++) {
         //value = (s32)getControlByOrder(mConChanIdx * 4 + i) * 0x640 / CHAN_MAX_VALUE;
         value = map(getControlByOrder(mConChanIdx * 4 + i), 900, 2100, -1600, 1600);
@@ -153,8 +154,8 @@ void RFProtocolDevo::buildDataPacket(void)
     }
     mPacketBuf[9] = sign;
 
-    mConChanIdx = mConChanIdx + 1;
-    if (mConChanIdx * 4 >= mConChanCnt)
+    mConChanIdx++;
+    if (mConChanIdx * 4 >= CHANNEL_CNT)
         mConChanIdx = 0;
     addPacketSuffix();
 }
@@ -300,7 +301,7 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
     CYRF_03_TX_CFG,         0x08,
     CYRF_06_RX_CFG,         0x4A,
     CYRF_0B_PWR_CTRL,       0x00,
-    CYRF_0D_IO_CFG,         0x04,
+    CYRF_0D_IO_CFG,         0x04,   // PACTL as GPIO
     CYRF_0E_GPIO_CTRL,      0x20,
     CYRF_10_FRAMING_CFG,    0xA4,
     CYRF_11_DATA32_THOLD,   0x05,
@@ -313,11 +314,10 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
     CYRF_1E_RX_OVERRIDE,    0x10,
     CYRF_1F_TX_OVERRIDE,    0x00,
     CYRF_01_TX_LENGTH,      0x10,
-    CYRF_0C_XTAL_CTRL,      0xC0,
-    CYRF_0F_XACT_CFG,       0x10,
+    CYRF_0C_XTAL_CTRL,      0xC0,   // XOUT as GPIO
+    CYRF_0F_XACT_CFG,       0x10,   // 
     CYRF_27_CLK_OVERRIDE,   0x02,
     CYRF_28_CLK_EN,         0x02,
-    CYRF_0F_XACT_CFG,       0x28
 };
 
 void RFProtocolDevo::init1(void)
@@ -325,12 +325,6 @@ void RFProtocolDevo::init1(void)
     /* Initialise CYRF chip */
     mDev.initialize();
     mDev.reset();
-
-    mDev.readMfgID(mMfgIDBuf);
-    mDev.setTxRxMode(TX_EN);
-    mDev.setCRCSeed(0x0000);
-    mDev.setSOPCode_P(SOPCODES[0]);
-    setRadioChannels();
 
     u8 reg, val;
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) / 2; i++) {
@@ -350,7 +344,7 @@ void RFProtocolDevo::setRadioChannels(void)
 
     printf2("Radio Channels:");
     for (u8 i = 0; i < 3; i++) {
-        printf2(" %02x", mRFChanBufs[i]);
+        printf2(" %02d", mRFChanBufs[i]);
     }
     printf2("\n");
 
@@ -361,8 +355,8 @@ void RFProtocolDevo::setRadioChannels(void)
 
 void RFProtocolDevo::buildPacket(void)
 {
-    printf2("callState state:%d, bind ctr:%d, packet ctr:%d\n", mState, mBindCtr, mPacketCtr);
-    
+//    printf2("callState %08ld, state:%d, bind ctr:%d, packet ctr:%d\n", micros(), mState, mBindCtr, mPacketCtr);
+
     switch(mState) {
         case DEVO_BIND:
             if (mBindCtr > 0)
@@ -406,7 +400,7 @@ void RFProtocolDevo::buildPacket(void)
             break;
             
         case DEVO_BOUND_10:
-            buildBeaconPacket(mConChanCnt > 8 ? failsafe_pkt : 0);
+            buildBeaconPacket(CHANNEL_CNT > 8 ? failsafe_pkt : 0);
             failsafe_pkt = !failsafe_pkt;
             scramblePacket();
             mState = DEVO_BOUND_1;
@@ -504,8 +498,10 @@ u16 RFProtocolDevo::callState(void)
         do {
             irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
 //            printf2("IRQ : %x\n", irq);
-            if(++i > NUM_WAIT_LOOPS)
-                return PACKET_PERIOD_uS;        
+            if(++i > NUM_WAIT_LOOPS) {
+                printf2("MAX WAIT IRQ : %x\n", irq);
+                return PACKET_PERIOD_uS;
+            }
         } while (!(irq & 0x02));
 
         if (mState == DEVO_BOUND) {
@@ -521,12 +517,19 @@ u16 RFProtocolDevo::callState(void)
         }
     }
     mTxState = !mTxState;
+
     return PACKET_PERIOD_uS;
 }
 
 int RFProtocolDevo::init(void)
 {
     init1();
+
+    mDev.readMfgID(mMfgIDBuf);
+    mDev.setTxRxMode(TX_EN);
+    mDev.setCRCSeed(0x0000);
+    mDev.setSOPCode_P(SOPCODES[0]);
+    setRadioChannels();
 
     mBoolFixedID = 0;
     failsafe_pkt = 0;
@@ -536,12 +539,11 @@ int RFProtocolDevo::init(void)
     mDev.setRFChannel(*mCurRFChPtr);
 
     //num_channels = ((Model.num_channels + 3) >> 2) * 4;
-    mConChanCnt = 8;
     mConChanIdx = 0;
     mPacketCtr  = 0;
     mTxState    = 0;
 
-    if(1) {  // ! Model.mFixedID
+    if (1) {  // ! Model.mFixedID
         mFixedID = ((u32)(mRFChanBufs[0] ^ mMfgIDBuf[0] ^ mMfgIDBuf[3]) << 16)
                  | ((u32)(mRFChanBufs[1] ^ mMfgIDBuf[1] ^ mMfgIDBuf[4]) << 8)
                  | ((u32)(mRFChanBufs[2] ^ mMfgIDBuf[2] ^ mMfgIDBuf[5]) << 0);

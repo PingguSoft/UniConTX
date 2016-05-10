@@ -45,7 +45,7 @@ RFProtocol::~RFProtocol()
 
 void RFProtocol::loop(void)
 {
-    update();
+    update(micros());
 }
 
 int RFProtocol::init(void)
