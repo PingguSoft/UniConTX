@@ -34,14 +34,14 @@ void calcPPM();
 s16 RCRcvrPPM::getRC(u8 ch)
 {
     if (ch >= getChCnt())
-        return 1000;
+        return CHAN_MIN_VALUE;
 
     return sRC[ch];
 }
 
 s16 *RCRcvrPPM::getRCs(void)
 {
-    return sRC;
+    return (s16*)sRC;
 }
 
 u8 RCRcvrPPM::getChCnt(void)
@@ -52,24 +52,12 @@ u8 RCRcvrPPM::getChCnt(void)
 void RCRcvrPPM::init(void)
 {
     for (u8 i = 0; i < sizeof(sRC); i++)
-        sRC[i] = 1500;
-    
-    sRC[0] = 900; // T
-#if 1
-    sRC[4] = 900;
-    sRC[5] = 900;
-    sRC[6] = 900;
-    sRC[7] = 900;
-#endif
+        sRC[i] = CHAN_MID_VALUE;
 
-//    pinMode(PIN_PPM, INPUT);
-//    attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
+    sRC[RFProtocol::CH_THROTTLE] = CHAN_MIN_VALUE;
 
-#if 0
-    TCCR1A = 0;
-    TCCR1B = 0;
-    TCCR1B |= (1 << CS11);  //set timer1 to increment every 0,5 us
-#endif
+    pinMode(PIN_PPM, INPUT);
+    attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
 }
 
 void RCRcvrPPM::close(void)
@@ -89,8 +77,8 @@ void calcPPM()
         ch = 0;
     } else {
         if (ch < CH_CNT - 1) {
-            u16 val = constrain(diff, 1000, 2000);
-            sRC[ch++] = val; //map(val, 1000, 2000, -500, 500);
+            u16 val = constrain(diff, PPM_MIN_VALUE, PPM_MAX_VALUE);
+            sRC[ch++] = map(val, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
         }
     }
     lastTS = ts;

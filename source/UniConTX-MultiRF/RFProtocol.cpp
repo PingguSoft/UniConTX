@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -89,7 +89,7 @@ void RFProtocol::clearRFPowerUpdated(void)
 int RFProtocol::getInfo(s8 id, u8 *data)
 {
     u8 size = 0;
-    
+
     switch (id) {
         case INFO_ID:
             size = 4;
@@ -140,7 +140,7 @@ void RFProtocol::startState(unsigned long period)
 
 // E A T R : deviation channel order
 static const PROGMEM u8 TBL_ORDERS[4] = {
-    RFProtocol::CH_AILERON,  RFProtocol::CH_ELEVATOR, 
+    RFProtocol::CH_ELEVATOR, RFProtocol::CH_AILERON,
     RFProtocol::CH_THROTTLE, RFProtocol::CH_RUDDER };
 
 s16 RFProtocol::getControlByOrder(u8 ch)

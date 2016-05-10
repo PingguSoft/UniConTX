@@ -4,8 +4,6 @@
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
 
- This program is derived from deviationTx project for Arduino.
-
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -45,5 +43,12 @@ typedef uint64_t u64;
 #ifndef FALSE
 #define FALSE   0
 #endif
+
+#define PPM_MIN_VALUE   1000
+#define PPM_MAX_VALUE   2000
+
+#define CHAN_MIN_VALUE -500
+#define CHAN_MID_VALUE  0
+#define CHAN_MAX_VALUE  500
 
 #endif

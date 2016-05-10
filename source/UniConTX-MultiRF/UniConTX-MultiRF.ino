@@ -128,7 +128,8 @@ void setup()
     mRcvr.init();
 
     conf.dwSignature = 0xCAFEBABE;
-    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_100mW;
 
@@ -146,14 +147,14 @@ void loop()
 {
 #if 1
     if (mRFProto) {
-        //mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
+        mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
     }
-#else
+//#else
     static u32 lastTS;
     u32 ts = millis();
     if (ts - lastTS > 200) {
-        printf2("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
+        pf("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
             mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
         lastTS = ts;
     }

@@ -61,14 +61,14 @@ static s16 sRC[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
 s16 RCRcvrPWM::getRC(u8 ch)
 {
     if (ch >= getChCnt())
-        return -500;
+        return CHAN_MIN_VALUE;
 
     return sRC[ch];
 }
 
 s16 *RCRcvrPWM::getRCs(void)
 {
-    return sRC;
+    return (s16*)sRC;
 }
 
 u8 RCRcvrPWM::getChCnt(void)
@@ -78,8 +78,10 @@ u8 RCRcvrPWM::getChCnt(void)
 
 void RCRcvrPWM::init(void)
 {
-    memset(sRC, 0, sizeof(sRC));
-    sRC[0] = -500;  // throttle min
+    for (u8 i = 0; i < sizeof(sRC); i++)
+        sRC[i] = CHAN_MID_VALUE;
+
+    sRC[RFProtocol::CH_THROTTLE] = CHAN_MIN_VALUE;
 
     for (u8 i = 0; i < sizeof(TBL_PINS_RX1); i++) {
         u8 pin = pgm_read_byte(TBL_PINS_RX1 + i);
@@ -130,10 +132,8 @@ void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
         bv = BV(pgm_read_byte(tbl + i) - bit);
         if (mask & bv) {
             if (!(pins & bv)) {
-                wDiff  = constrain(ts - wPrevTime[start + i], 1000, 2000);
-                sRC[start + i] = map(wDiff, 1000, 2000, -500, 500);
-                if (idx == PCINT_RX1_IDX && (i == 1 || i == 3))
-                    sRC[start + i] = -sRC[start + i];
+                wDiff  = constrain(ts - wPrevTime[start + i], PPM_MIN_VALUE, PPM_MAX_VALUE);
+                sRC[start + i] = map(wDiff, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
             } else {
                 wPrevTime[start + i] = ts;
             }

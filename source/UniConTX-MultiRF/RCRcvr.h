@@ -18,8 +18,9 @@
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include "Common.h"
+#include "RFProtocol.h"
 
-class RCRcvr 
+class RCRcvr
 {
 
 public:

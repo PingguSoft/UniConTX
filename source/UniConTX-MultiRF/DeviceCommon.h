@@ -35,7 +35,7 @@
 #define NRF_CS_LO()     digitalWrite(PIN_NRF_CSN, LOW);
 
 #define PIN_CYRF_CSN    A5
-#define PIN_CYRF_RESET  10
+#define PIN_CYRF_RESET  9
 #define CYRF_CS_CFG()   pinMode(PIN_CYRF_CSN, OUTPUT);  pinMode(PIN_CYRF_RESET, OUTPUT);
 #define CYRF_CS_HI()    digitalWrite(PIN_CYRF_CSN, HIGH);
 #define CYRF_CS_LO()    digitalWrite(PIN_CYRF_CSN, LOW);
@@ -74,14 +74,14 @@
                         CYRF_CS_CFG();  CYRF_CS_HI();   CYRF_RST_HI();
 
 typedef enum TxPower {
-    TXPOWER_100uW,
-    TXPOWER_300uW,
-    TXPOWER_1mW,
-    TXPOWER_3mW,
-    TXPOWER_10mW,
-    TXPOWER_30mW,
-    TXPOWER_100mW,
-    TXPOWER_150mW,
+    TXPOWER_100uW = 0,      // -35dBm
+    TXPOWER_300uW,          // -30dBm
+    TXPOWER_1mW,            // -24dBm
+    TXPOWER_3mW,            // -18dBm
+    TXPOWER_10mW,           // -13dBm
+    TXPOWER_30mW,           // - 5dBm
+    TXPOWER_100mW,          //   0dBm
+    TXPOWER_150mW,          // + 4dBm
     TXPOWER_LAST,
 } TXPOWER_T;
 

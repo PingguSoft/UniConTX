@@ -24,9 +24,6 @@
 class RFProtocol : public Timer
 {
 public:
-    #define CHAN_MAX_VALUE 500
-    #define CHAN_MIN_VALUE -500
-
     enum {
         RCVR_MSP,
         RCVR_PWM,

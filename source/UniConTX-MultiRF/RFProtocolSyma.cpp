@@ -31,7 +31,7 @@
 
 #define PROTO_OPT_X5C_X2    0x01
 
-#define __PRINT_FUNC__      printf2(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+#define __PRINT_FUNC__      pf(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 
 enum {
     SYMAX_INIT1 = 0,
@@ -62,25 +62,29 @@ u8 RFProtocolSyma::checkStatus()
 }
 
 
+// Channel values are sign + magnitude 8bit values
 #define BABS(X) (((X) < 0) ? -(u8)(X) : (X))
+#define ABS(X)  (((X) < 0) ? -(X) : (X))
+
 u8 RFProtocolSyma::getChannel(u8 id)
 {
-    s32 ch = RFProtocol::getControl(id);
+    s16 ch = RFProtocol::getControl(id);
+
+    if (id == CH_AILERON || id == CH_RUDDER)
+        ch = -ch;
+
     if (ch < CHAN_MIN_VALUE) {
         ch = CHAN_MIN_VALUE;
     } else if (ch > CHAN_MAX_VALUE) {
         ch = CHAN_MAX_VALUE;
     }
 
-    u8 ret = (u8) ((ch < 0 ? 0x80 : 0) | BABS(ch * 127 / CHAN_MAX_VALUE));
+    u8 ret = (u8) ((ch < 0 ? 0x80 : 0) | (u8)map(ABS(ch), 0, CHAN_MAX_VALUE, 0, 127)); //BABS(ch / CHAN_MAX_VALUE * 127));
     return ret;
 }
 
 void RFProtocolSyma::getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron, u8* flags)
 {
-    // Protocol is registered AETRF, that is
-    // Aileron is channel 1, Elevator - 2, Throttle - 3, Rudder - 4, Flip control - 5
-
     *aileron  = getChannel(CH_AILERON);
     *elevator = getChannel(CH_ELEVATOR);
     *throttle = getChannel(CH_THROTTLE);
@@ -169,6 +173,7 @@ void RFProtocolSyma::buildPacket(u8 bind)
         mPacketBuf[8] = 0x00;
     }
     mPacketBuf[9] = getCheckSum(mPacketBuf);
+//    dump("CH", mPacketBuf, 10);
 
 }
 

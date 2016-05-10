@@ -56,7 +56,7 @@ void Timer::update(unsigned long now)
     if (mPeriod == 0)
         return;
 
-#if 0    
+#if 0
     if (now < mLastEventTime) {
         diff = 0xffffffffL - lastEventTime;
         diff += (now + 1);
@@ -70,5 +70,9 @@ void Timer::update(unsigned long now)
     if (diff >= mPeriod) {
         mLastEventTime = now;
         handleTimer(1);
+    }
+
+    if (diff > (mPeriod + mPeriod * 0.5)) {
+        Serial.println("TOO LATE !!!\n");
     }
 }

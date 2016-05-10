@@ -107,22 +107,22 @@ void DeviceCYRF6936::setTxRxMode(enum TXRX_State mode)
 {
     u8 mod;
     u8 gpio;
-    
+
    if(mode == TX_EN) {
         RFX_TX();
-        mod  = 0x28;        // SYNTH MODE (8) = TX
-        gpio = 0x20;        // XOUT(7)=1, PACTL(5)=0
+        mod  = 0x28;        // force SYNTH MODE (8) = TX
+        gpio = 0x80;        // XOUT(7)=1, PACTL(5)=0       XOUT is a switch for TX
     } else if (mode == RX_EN) {
         RFX_RX();
-        mod  = 0x2C;        // SYNTH MODE (C) = RX
-        gpio = 0x80;        // XOUT(7)=0, PACTL(5)=1
+        mod  = 0x2C;        // force SYNTH MODE (C) = RX
+        gpio = 0x20;        // XOUT(7)=0, PACTL(5)=1       PACTL is a switch for RX
     } else {
         RFX_IDLE();
-        mod  = 0x24;        // IDLE
+        mod  = 0x24;        // force IDLE
         gpio = 0x00;
     }
     writeReg(CYRF_0F_XACT_CFG,  mod);
-    writeReg(CYRF_0E_GPIO_CTRL, gpio);    
+    writeReg(CYRF_0E_GPIO_CTRL, gpio);
 }
 
 int DeviceCYRF6936::reset()
@@ -141,11 +141,6 @@ int DeviceCYRF6936::reset()
     writeReg(CYRF_0D_IO_CFG, 0x04);     // Enable PACTL as GPIO
     setTxRxMode(TXRX_OFF);
 
-    u8 data[8];
-    readRegMulti(CYRF_22_SOP_CODE, data, 8);
-    printf2("RESET !! : %x\n", readReg(CYRF_10_FRAMING_CFG));
-    dump("SOP", data, 8);
-
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
@@ -160,7 +155,9 @@ void DeviceCYRF6936::readMfgID(u8 *data)
     /* Fuses power off */
     writeReg(CYRF_25_MFG_ID, 0x00);
 
+#if __DEBUG__
     dump("MFG", data, 6);
+#endif
 }
 
 void DeviceCYRF6936::setRFChannel(u8 ch)
@@ -280,7 +277,9 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
         startReceive();
         delay(10);
         rssi[i] = readReg(CYRF_13_RSSI);
-        printf2("CH:%d, RSSI:%d\n", i, rssi[i]);
+#if __DEBUG__
+        pf("CH:%d, RSSI:%d\n", i, rssi[i]);
+#endif
     }
 
     for (i = 0; i < len; i++) {

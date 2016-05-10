@@ -4,8 +4,6 @@
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
 
- This program is derived from deviationTx project for Arduino.
-
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -46,7 +44,7 @@ u32 rand32()
 }
 
 #ifdef __DEBUG_PRINTF__
-void printf2(char *fmt, ... )
+void pf(char *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -56,7 +54,7 @@ void printf2(char *fmt, ... )
     Serial.print(buf);
 }
 
-void printf2(const __FlashStringHelper *fmt, ... )
+void pf(const __FlashStringHelper *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -78,24 +76,24 @@ void dump(char *name, u8 *data, u16 cnt)
     u8  b;
     u16 addr = 0;
 
-    printf2("-- %s buf size : %d -- \n", name, cnt);
+    pf("-- %s buf size : %d -- \n", name, cnt);
     while (cnt) {
-        printf2("%08x - ", addr);
+        pf("%08x - ", addr);
 
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
-            printf2("%02x ", b);
+            pf("%02x ", b);
         }
 
-        printf2(" : ");
+        pf(" : ");
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
             if ((b > 0x1f) && (b < 0x7f))
-                printf2("%c", b);
+                pf("%c", b);
             else
-                printf2(".");
+                pf(".");
         }
-        printf2("\n");
+        pf("\n");
         data += i;
         addr += i;
         cnt  -= i;

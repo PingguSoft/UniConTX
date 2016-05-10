@@ -28,10 +28,10 @@ u32  rand32();
 #define __DEBUG_PRINTF__    1
 
 #ifdef __DEBUG_PRINTF__
-void printf2(char *fmt, ... );
-void printf2(const __FlashStringHelper *fmt, ... );
+void pf(char *fmt, ... );
+void pf(const __FlashStringHelper *fmt, ... );
 #else
-#define printf2(...)
+#define pf(...)
 #endif
 #endif
 
