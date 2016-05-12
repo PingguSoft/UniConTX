@@ -43,7 +43,7 @@ u32 rand32()
     return rand32_r(0, 0);
 }
 
-#ifdef __DEBUG_PRINTF__
+#if __STD_SERIAL__
 void pf(char *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
@@ -67,8 +67,6 @@ void pf(const __FlashStringHelper *fmt, ... )
     va_end(args);
     Serial.print(buf);
 }
-#endif
-
 
 void dump(char *name, u8 *data, u16 cnt)
 {
@@ -99,3 +97,4 @@ void dump(char *name, u8 *data, u16 cnt)
         cnt  -= i;
     }
 }
+#endif

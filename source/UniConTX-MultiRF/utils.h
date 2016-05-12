@@ -18,6 +18,7 @@
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include "Common.h"
+#include "SerialProtocol.h"
 
 // Bit vector from bit position
 #define BV(bit) (1 << (bit))
@@ -25,14 +26,19 @@
 u32  rand32_r(u32 *seed, u8 update);
 u32  rand32();
 
-#define __DEBUG_PRINTF__    1
 
-#ifdef __DEBUG_PRINTF__
-void pf(char *fmt, ... );
-void pf(const __FlashStringHelper *fmt, ... );
+#if __DEBUG__
+    #if __STD_SERIAL__
+        void pf(char *fmt, ... );
+        void pf(const __FlashStringHelper *fmt, ... );
+        void dump(char *name, u8 *data, u16 cnt);
+    #else
+        #define pf      SerialProtocol::printf
+        #define dump    SerialProtocol::dumpHex
+    #endif
 #else
-#define pf(...)
-#endif
+    #define pf(...)
+    #define dump(...)
 #endif
 
-void dump(char *name, u8 *data, u16 cnt);
+#endif

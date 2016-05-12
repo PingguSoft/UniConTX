@@ -51,7 +51,8 @@ private:
     void setBoundSOPCodes(void);
     void setRadioChannels(void);
     void buildPacket(void);
-    
+    u16  callStateTelemetry(void);
+    u16  callStateNormal(void);
 
 // variables
     DeviceCYRF6936  mDev;

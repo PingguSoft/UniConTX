@@ -16,7 +16,6 @@
 #define _SERIAL_PROTOCOL_H_
 
 #include "Common.h"
-#include "utils.h"
 #include <stdarg.h>
 
 #define MAX_PACKET_SIZE 32
@@ -48,11 +47,15 @@ public:
     void evalCommand(u8 cmd, u8 *data, u8 size);
     void setCallback(u32 (*callback)(u8 cmd, u8 *data, u8 size));
 
-    void sendString_P(const char *fmt, ...);
-    void sendString(char *fmt, ...);
     u8   getString(u8 *buf);
     void clearTX(void);
     void clearRX(void);
+    u8   available(void);
+    u8   read(void);
+    
+    static void printf(char *fmt, ... );
+    static void printf(const __FlashStringHelper *fmt, ... );
+    static void dumpHex(char *name, u8 *data, u16 cnt);
     
 private:
     typedef enum
@@ -78,4 +81,3 @@ private:
 };
 
 #endif
-

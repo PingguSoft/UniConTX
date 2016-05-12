@@ -39,6 +39,14 @@ s16 RCRcvrPPM::getRC(u8 ch)
     return sRC[ch];
 }
 
+void RCRcvrPPM::setRC(u8 ch, s16 val)
+{
+    if (ch >= getChCnt())
+        return;
+
+    sRC[ch] = val;
+}
+
 s16 *RCRcvrPPM::getRCs(void)
 {
     return (s16*)sRC;
@@ -57,7 +65,7 @@ void RCRcvrPPM::init(void)
     sRC[RFProtocol::CH_THROTTLE] = CHAN_MIN_VALUE;
 
     pinMode(PIN_PPM, INPUT);
-    attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
+    //attachInterrupt(PIN_PPM - 2, calcPPM, RISING);
 }
 
 void RCRcvrPPM::close(void)

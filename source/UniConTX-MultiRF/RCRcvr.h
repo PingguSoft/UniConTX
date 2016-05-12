@@ -30,6 +30,7 @@ public:
     virtual void close(void);
     virtual s16  getRC(u8 ch);
     virtual s16 *getRCs(void);
+    virtual void setRC(u8 ch, s16 val);
     virtual u8   getChCnt(void);
 
 private:

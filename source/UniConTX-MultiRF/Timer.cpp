@@ -73,6 +73,6 @@ void Timer::update(unsigned long now)
     }
 
     if (diff > (mPeriod + mPeriod * 0.5)) {
-        Serial.println("TOO LATE !!!\n");
+        pf("TOO LATE !!!\n");
     }
 }

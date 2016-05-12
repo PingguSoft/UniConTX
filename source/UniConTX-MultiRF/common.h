@@ -19,11 +19,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-
-//Magic macro to check enum size
-//#define ctassert(n,e) extern unsigned char n[(e)?0:-1]
-#define ctassert(COND,MSG) typedef char static_assertion_##MSG[(COND)?1:-1]
-
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
@@ -50,5 +45,8 @@ typedef uint64_t u64;
 #define CHAN_MIN_VALUE -500
 #define CHAN_MID_VALUE  0
 #define CHAN_MAX_VALUE  500
+
+#define __DEBUG__       1
+//#define __STD_SERIAL__  0
 
 #endif

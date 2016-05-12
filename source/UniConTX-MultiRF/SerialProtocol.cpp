@@ -33,7 +33,7 @@ struct ringBuf mRxRingBuf = { {0}, 0, 0 };
 struct ringBuf mTxRingBuf = { {0}, 0, 0 };
 static u8 chkSumTX;
 
-void putChar(struct ringBuf *buf, u8 data)
+static void putChar(struct ringBuf *buf, u8 data)
 {
     u8 head = buf->head;
 
@@ -43,7 +43,7 @@ void putChar(struct ringBuf *buf, u8 data)
     buf->head = head;
 }
 
-u8 getChar(struct ringBuf *buf)
+static u8 getChar(struct ringBuf *buf)
 {
     u8 tail = buf->tail;
     u8 ch   = buf->buffer[tail];
@@ -55,23 +55,23 @@ u8 getChar(struct ringBuf *buf)
     return ch;
 }
 
-void putChar2TX(u8 data)
+static void putChar2TX(u8 data)
 {
     chkSumTX ^= data;
     putChar(&mTxRingBuf, data);
 }
 
-__inline void flushTX(void)
+static __inline void flushTX(void)
 {
     UCSR0B |= (1<<UDRIE0);
 }
 
-u8 available(struct ringBuf *buf)
+static u8 sAvailable(struct ringBuf *buf)
 {
     return ((u8)(buf->head - buf->tail)) % MAX_BUF_SIZE;
 }
 
-#if 0
+#if !__STD_SERIAL__
 ISR(USART_RX_vect)
 {
     putChar(&mRxRingBuf, UDR0);
@@ -141,7 +141,7 @@ void SerialProtocol::clearRX(void)
     sei();
 }
 
-void SerialProtocol::sendString_P(const char *fmt, ...)
+void SerialProtocol::printf(const __FlashStringHelper *fmt, ...)
 {
     char buf[128]; // resulting string limited to 128 chars
 
@@ -160,7 +160,7 @@ void SerialProtocol::sendString_P(const char *fmt, ...)
     flushTX();
 }
 
-void SerialProtocol::sendString(char *fmt, ...)
+void SerialProtocol::printf(char *fmt, ...)
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -174,15 +174,54 @@ void SerialProtocol::sendString(char *fmt, ...)
     flushTX();
 }
 
+void SerialProtocol::dumpHex(char *name, u8 *data, u16 cnt)
+{
+    u8  i;
+    u8  b;
+    u16 addr = 0;
+
+    pf("-- %s buf size : %d -- \n", name, cnt);
+    while (cnt) {
+        pf("%08x - ", addr);
+
+        for (i = 0; (i < 16) && (i < cnt); i ++) {
+            b = *(data + i);
+            pf("%02x ", b);
+        }
+
+        pf(" : ");
+        for (i = 0; (i < 16) && (i < cnt); i ++) {
+            b = *(data + i);
+            if ((b > 0x1f) && (b < 0x7f))
+                pf("%c", b);
+            else
+                pf(".");
+        }
+        pf("\n");
+        data += i;
+        addr += i;
+        cnt  -= i;
+    }
+}
 
 u8 SerialProtocol::getString(u8 *buf)
 {
-    u8 size = available(&mRxRingBuf);
+    u8 size = sAvailable(&mRxRingBuf);
 
     for (u8 i = 0; i < size; i++)
         *buf++ = getChar(&mRxRingBuf);
 
     return size;
+}
+
+u8 SerialProtocol::available(void)
+{
+    return sAvailable(&mRxRingBuf);
+}
+
+u8 SerialProtocol::read(void)
+{
+    return getChar(&mRxRingBuf);
 }
 
 void SerialProtocol::setCallback(u32 (*callback)(u8 cmd, u8 *data, u8 size))
@@ -224,7 +263,7 @@ void SerialProtocol::evalCommand(u8 cmd, u8 *data, u8 size)
 
 void SerialProtocol::handleRX(void)
 {
-    u8 rxSize = available(&mRxRingBuf);
+    u8 rxSize = sAvailable(&mRxRingBuf);
 
     if (rxSize == 0)
         return;

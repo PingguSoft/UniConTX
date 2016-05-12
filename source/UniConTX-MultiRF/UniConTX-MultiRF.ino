@@ -30,6 +30,7 @@
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
 #include "RCRcvrPPM.h"
+#include "SerialProtocol.h"
 
 #define FW_VERSION  0x0120
 
@@ -38,6 +39,7 @@ static u8 mBaudChkCtr;
 static u8 mBaudAckStr[12];
 static RFProtocol *mRFProto = NULL;
 static RCRcvrPPM  mRcvr;
+static SerialProtocol mSerial;
 
 struct Config {
     u32 dwSignature;
@@ -120,7 +122,11 @@ static u8 initProtocol(u32 id)
 
 void setup()
 {
+#if __STD_SERIAL__    
     Serial.begin(57600);
+#else
+    mSerial.begin(57600);
+#endif
 
     struct Config conf;
     EEPROM.get(0, conf);
@@ -128,8 +134,8 @@ void setup()
     mRcvr.init();
 
     conf.dwSignature = 0xCAFEBABE;
-//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
-    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
+    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_100mW;
 
@@ -143,22 +149,57 @@ void setup()
     }
 }
 
+s16  ppm =   CHAN_MIN_VALUE;
+bool inc  =  true;
+bool simul = false;
+
 void loop()
 {
-#if 1
+    u8 key = 0;
+    
+    if (mSerial.available()) {
+        key = mSerial.read();
+        switch (key) {
+            case ' ' :
+                simul = !simul;
+                pf(F("SIMUL : %d\n"), simul);
+                if (simul) {
+                    ppm = 1000;
+                    inc = true;
+                }
+                break;
+        }
+    }
+
     if (mRFProto) {
+        if (simul) {
+            static u32 lastTS;
+            u32 ts = millis();
+            if (ts - lastTS > 500) {
+                if (inc) {
+                    ppm += 10;
+                    if (ppm > CHAN_MAX_VALUE) {
+                        ppm = CHAN_MAX_VALUE;
+                        inc = false;
+                    }
+                } else {
+                    ppm -= 10;
+                    if (ppm < CHAN_MIN_VALUE) {
+                        ppm = CHAN_MIN_VALUE;
+                        inc = true;
+                    }
+                }
+                pf(F("THR : %4d\n"), map(ppm, CHAN_MIN_VALUE, CHAN_MAX_VALUE, PPM_MIN_VALUE, PPM_MAX_VALUE));
+                mRcvr.setRC(0, ppm);
+                // pf("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
+                //    mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
+                lastTS = ts;
+            }
+        }
+
         mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
     }
-//#else
-    static u32 lastTS;
-    u32 ts = millis();
-    if (ts - lastTS > 200) {
-        pf("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
-            mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
-        lastTS = ts;
-    }
-#endif
 }
 
 int freeRam() {
