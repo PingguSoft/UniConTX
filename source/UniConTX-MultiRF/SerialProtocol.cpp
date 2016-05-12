@@ -180,24 +180,24 @@ void SerialProtocol::dumpHex(char *name, u8 *data, u16 cnt)
     u8  b;
     u16 addr = 0;
 
-    pf("-- %s buf size : %d -- \n", name, cnt);
+    LOG("-- %s buf size : %d -- \n", name, cnt);
     while (cnt) {
-        pf("%08x - ", addr);
+        LOG("%08x - ", addr);
 
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
-            pf("%02x ", b);
+            LOG("%02x ", b);
         }
 
-        pf(" : ");
+        LOG(" : ");
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
             if ((b > 0x1f) && (b < 0x7f))
-                pf("%c", b);
+                LOG("%c", b);
             else
-                pf(".");
+                LOG(".");
         }
-        pf("\n");
+        LOG("\n");
         data += i;
         addr += i;
         cnt  -= i;

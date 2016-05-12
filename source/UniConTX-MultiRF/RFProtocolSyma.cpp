@@ -31,7 +31,7 @@
 
 #define PROTO_OPT_X5C_X2    0x01
 
-#define __PRINT_FUNC__      pf(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+#define __PRINT_FUNC__      LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 
 enum {
     SYMAX_INIT1 = 0,
@@ -173,7 +173,7 @@ void RFProtocolSyma::buildPacket(u8 bind)
         mPacketBuf[8] = 0x00;
     }
     mPacketBuf[9] = getCheckSum(mPacketBuf);
-//    dump("CH", mPacketBuf, 10);
+//    DUMP("CH", mPacketBuf, 10);
 
 }
 

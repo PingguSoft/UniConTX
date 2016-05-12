@@ -12,4 +12,12 @@
  You should have received a copy of the GNU General Public License
  along with Deviation.  If not, see <http://www.gnu.org/licenses/>.
  */
+// For Arduino 1.0 and earlier
+#if defined(ARDUINO) && ARDUINO >= 100
+#include "Arduino.h"
+#else
+#include "WProgram.h"
+#endif
 
+#include "Telemetry.h"
+#include "utils.h"

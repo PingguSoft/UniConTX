@@ -29,16 +29,16 @@ u32  rand32();
 
 #if __DEBUG__
     #if __STD_SERIAL__
-        void pf(char *fmt, ... );
-        void pf(const __FlashStringHelper *fmt, ... );
-        void dump(char *name, u8 *data, u16 cnt);
+        void LOG(char *fmt, ... );
+        void LOG(const __FlashStringHelper *fmt, ... );
+        void DUMP(char *name, u8 *data, u16 cnt);
     #else
-        #define pf      SerialProtocol::printf
-        #define dump    SerialProtocol::dumpHex
+        #define LOG      SerialProtocol::printf
+        #define DUMP    SerialProtocol::dumpHex
     #endif
 #else
-    #define pf(...)
-    #define dump(...)
+    #define LOG(...)
+    #define DUMP(...)
 #endif
 
 #endif

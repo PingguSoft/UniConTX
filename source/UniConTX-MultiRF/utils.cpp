@@ -44,7 +44,7 @@ u32 rand32()
 }
 
 #if __STD_SERIAL__
-void pf(char *fmt, ... )
+void LOG(char *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -54,7 +54,7 @@ void pf(char *fmt, ... )
     Serial.print(buf);
 }
 
-void pf(const __FlashStringHelper *fmt, ... )
+void LOG(const __FlashStringHelper *fmt, ... )
 {
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -68,30 +68,30 @@ void pf(const __FlashStringHelper *fmt, ... )
     Serial.print(buf);
 }
 
-void dump(char *name, u8 *data, u16 cnt)
+void DUMP(char *name, u8 *data, u16 cnt)
 {
     u8  i;
     u8  b;
     u16 addr = 0;
 
-    pf("-- %s buf size : %d -- \n", name, cnt);
+    LOG("-- %s buf size : %d -- \n", name, cnt);
     while (cnt) {
-        pf("%08x - ", addr);
+        LOG("%08x - ", addr);
 
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
-            pf("%02x ", b);
+            LOG("%02x ", b);
         }
 
-        pf(" : ");
+        LOG(" : ");
         for (i = 0; (i < 16) && (i < cnt); i ++) {
             b = *(data + i);
             if ((b > 0x1f) && (b < 0x7f))
-                pf("%c", b);
+                LOG("%c", b);
             else
-                pf(".");
+                LOG(".");
         }
-        pf("\n");
+        LOG("\n");
         data += i;
         addr += i;
         cnt  -= i;

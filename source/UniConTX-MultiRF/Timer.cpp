@@ -72,7 +72,7 @@ void Timer::update(unsigned long now)
         handleTimer(1);
     }
 
-    if (diff > (mPeriod + mPeriod * 0.5)) {
-        pf("TOO LATE !!!\n");
-    }
+//    if (diff > (mPeriod + mPeriod * 0.5)) {
+//        LOG("TOO LATE !!!\n");
+//    }
 }

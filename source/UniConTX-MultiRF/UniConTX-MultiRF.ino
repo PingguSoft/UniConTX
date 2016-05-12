@@ -122,7 +122,7 @@ static u8 initProtocol(u32 id)
 
 void setup()
 {
-#if __STD_SERIAL__    
+#if __STD_SERIAL__
     Serial.begin(57600);
 #else
     mSerial.begin(57600);
@@ -149,54 +149,18 @@ void setup()
     }
 }
 
-s16  ppm =   CHAN_MIN_VALUE;
-bool inc  =  true;
-bool simul = false;
-
 void loop()
 {
-    u8 key = 0;
-    
-    if (mSerial.available()) {
-        key = mSerial.read();
-        switch (key) {
-            case ' ' :
-                simul = !simul;
-                pf(F("SIMUL : %d\n"), simul);
-                if (simul) {
-                    ppm = 1000;
-                    inc = true;
-                }
-                break;
-        }
-    }
-
     if (mRFProto) {
-        if (simul) {
-            static u32 lastTS;
-            u32 ts = millis();
-            if (ts - lastTS > 500) {
-                if (inc) {
-                    ppm += 10;
-                    if (ppm > CHAN_MAX_VALUE) {
-                        ppm = CHAN_MAX_VALUE;
-                        inc = false;
-                    }
-                } else {
-                    ppm -= 10;
-                    if (ppm < CHAN_MIN_VALUE) {
-                        ppm = CHAN_MIN_VALUE;
-                        inc = true;
-                    }
-                }
-                pf(F("THR : %4d\n"), map(ppm, CHAN_MIN_VALUE, CHAN_MAX_VALUE, PPM_MIN_VALUE, PPM_MAX_VALUE));
-                mRcvr.setRC(0, ppm);
-                // pf("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
-                //    mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
-                lastTS = ts;
-            }
+#if 0
+        static u32 lastTS;
+        u32 ts = millis();
+        if (ts - lastTS > 500) {
+            LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
+                mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
+            lastTS = ts;
         }
-
+#endif
         mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
         mRFProto->loop();
     }

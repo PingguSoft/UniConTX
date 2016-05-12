@@ -20,6 +20,7 @@
 #include "utils.h"
 #include "Timer.h"
 #include "DeviceCommon.h"
+#include "Telemetry.h"
 
 class RFProtocol : public Timer
 {
@@ -115,7 +116,7 @@ public:
 
 
     void startState(unsigned long period);
-
+    Telemetry getTM(void)           { return mTM;   }
 
     // for timer
     virtual void handleTimer(s8 id);
@@ -137,6 +138,8 @@ private:
     s16  mBufControls[MAX_CHANNEL];
     s8   mTmrState;
     u8   mTXPower;
+
+    Telemetry   mTM;
 };
 
 #endif

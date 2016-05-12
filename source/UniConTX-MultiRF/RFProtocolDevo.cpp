@@ -22,7 +22,6 @@
 #define MAX_BIND_COUNT       0x1388
 #define TELEMETRY_ENABLE     0x30
 
-#define PACKET_PERIOD_uS     1200
 #define INITIAL_WAIT_uS      2400
 
 enum PktState {
@@ -41,7 +40,7 @@ enum PktState {
     DEVO_BOUND_10,
 };
 
-//#define __PRINT_FUNC__      pf(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+//#define __PRINT_FUNC__      LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 
 static const PROGMEM u8 SOPCODES[][8] = {
     /* Note these are in order transmitted (LSB 1st) */
@@ -144,7 +143,8 @@ void RFProtocolDevo::buildDataPacket(void)
     mPacketBuf[0] = (CHANNEL_CNT << 4) | (0x0b + mConChanIdx);
     for (i = 0; i < 4; i++) {
         //value = (s32)getControlByOrder(mConChanIdx * 4 + i) * 0x640 / CHAN_MAX_VALUE;
-        value = map(getControlByOrder(mConChanIdx * 4 + i), CHAN_MIN_VALUE, CHAN_MAX_VALUE, -2000, 2000);
+        value = getControlByOrder(mConChanIdx * 4 + i);
+        value = map(value, CHAN_MIN_VALUE, CHAN_MAX_VALUE, -2100, 2100);
         if (value < 0) {
             value = -value;
             sign |= 1 << (7 - i);
@@ -186,49 +186,35 @@ s32 RFProtocolDevo::convFloatStr2Int(u8 *ptr)
 
 void RFProtocolDevo::parseTelemetryPacket(u8 *packet)
 {
-#if 0    
-    static const u8 voltpkt[] = {
-            TELEM_DEVO_VOLT1, TELEM_DEVO_VOLT2, TELEM_DEVO_VOLT3,
-            TELEM_DEVO_RPM1, TELEM_DEVO_RPM2, 0
-        };
-    static const u8 temppkt[] = {
-            TELEM_DEVO_TEMP1, TELEM_DEVO_TEMP2, TELEM_DEVO_TEMP3, TELEM_DEVO_TEMP4, 0
-        };
-    static const u8 gpslongpkt[] = { TELEM_GPS_LONG, 0};
-    static const u8 gpslatpkt[] = { TELEM_GPS_LAT, 0};
-    static const u8 gpsaltpkt[] = { TELEM_GPS_ALT, 0};
-    static const u8 gpsspeedpkt[] = { TELEM_GPS_SPEED, 0};
-    static const u8 gpstimepkt[] = { TELEM_GPS_TIME, 0};
-
-    if((packet[0] & 0xF0) != 0x30)
+    if((packet[0] & 0xF0) != TELEMETRY_ENABLE)
         return;
-    const u8 *update = NULL;
+
     scramblePacket(); //This will unscramble the packet
-    
+
     if (packet[13] != (mFixedID  & 0xff) ||
         packet[14] != ((mFixedID >> 8) & 0xff) ||
         packet[15] != ((mFixedID >> 16) & 0xff)) {
         return;
     }
-    
-    //if (packet[0] < 0x37) {
-    //    memcpy(Telemetry.line[packet[0]-0x30], packet+1, 12);
-    //}
-    if (packet[0] == TELEMETRY_ENABLE) {
-        update = voltpkt;
-        Telemetry.p.devo.volt[0] = packet[1]; //In 1/10 of Volts
-        Telemetry.p.devo.volt[1] = packet[3]; //In 1/10 of Volts
-        Telemetry.p.devo.volt[2] = packet[5]; //In 1/10 of Volts
-        Telemetry.p.devo.rpm[0]  = packet[7] * 120; //In RPM
-        Telemetry.p.devo.rpm[1]  = packet[9] * 120; //In RPM
+
+    switch (packet[0]) {
+        case TELEMETRY_ENABLE:
+            getTM().setVolt(0, packet[1]);      //In 1/10 of Volts
+            getTM().setVolt(1, packet[3]);
+            getTM().setVolt(2, packet[5]);
+            getTM().setRPM(0, packet[7] * 120); //In RPM
+            getTM().setRPM(1, packet[9] * 120);
+            break;
+
+        case 0x31:
+            getTM().setTemp(0, packet[1] == 0xff ? 0 : packet[1] - 20); //In degrees-C
+            getTM().setTemp(0, packet[2] == 0xff ? 0 : packet[2] - 20);
+            getTM().setTemp(0, packet[3] == 0xff ? 0 : packet[3] - 20);
+            getTM().setTemp(0, packet[4] == 0xff ? 0 : packet[4] - 20);
+            break;
     }
-    if (packet[0] == 0x31) {
-        update = temppkt;
-        Telemetry.p.devo.temp[0] = packet[1] == 0xff ? 0 : packet[1] - 20; //In degrees-C
-        Telemetry.p.devo.temp[1] = packet[2] == 0xff ? 0 : packet[2] - 20; //In degrees-C
-        Telemetry.p.devo.temp[2] = packet[3] == 0xff ? 0 : packet[3] - 20; //In degrees-C
-        Telemetry.p.devo.temp[3] = packet[4] == 0xff ? 0 : packet[4] - 20; //In degrees-C
-    }
+
+#if 0
     /* GPS Data
        32: 30333032302e3832373045fb  = 030°20.8270E
        33: 353935342e373737364e0700  = 59°54.776N
@@ -237,7 +223,6 @@ void RFProtocolDevo::parseTelemetryPacket(u8 *packet)
        36: 313832353532313531303132  = 2012-10-15 18:25:52 (UTC)
     */
     if (packet[0] == 0x32) {
-        update = gpslongpkt;
         Telemetry.gps.longitude = ((packet[1]-'0') * 100 + (packet[2]-'0') * 10 + (packet[3]-'0')) * 3600000
                                   + ((packet[4]-'0') * 10 + (packet[5]-'0')) * 60000
                                   + ((packet[7]-'0') * 1000 + (packet[8]-'0') * 100
@@ -246,7 +231,6 @@ void RFProtocolDevo::parseTelemetryPacket(u8 *packet)
             Telemetry.gps.longitude *= -1;
     }
     if (packet[0] == 0x33) {
-        update = gpslatpkt;
         Telemetry.gps.latitude = ((packet[1]-'0') * 10 + (packet[2]-'0')) * 3600000
                                   + ((packet[3]-'0') * 10 + (packet[4]-'0')) * 60000
                                   + ((packet[6]-'0') * 1000 + (packet[7]-'0') * 100
@@ -255,15 +239,12 @@ void RFProtocolDevo::parseTelemetryPacket(u8 *packet)
             Telemetry.gps.latitude *= -1;
     }
     if (packet[0] == 0x34) {
-        update = gpsaltpkt;
         Telemetry.gps.altitude = convFloatStr2Int(packet+1);
     }
     if (packet[0] == 0x35) {
-        update = gpsspeedpkt;
         Telemetry.gps.velocity = convFloatStr2Int(packet+7);
     }
     if (packet[0] == 0x36) {
-        update = gpstimepkt;
         u8 hour  = (packet[1]-'0') * 10 + (packet[2]-'0');
         u8 min   = (packet[3]-'0') * 10 + (packet[4]-'0');
         u8 sec   = (packet[5]-'0') * 10 + (packet[6]-'0');
@@ -277,7 +258,7 @@ void RFProtocolDevo::parseTelemetryPacket(u8 *packet)
                            | ((min & 0x3F) << 6)
                            | ((sec & 0x3F) << 0);
     }
-#endif    
+#endif
 }
 
 void RFProtocolDevo::setBoundSOPCodes(void)
@@ -343,11 +324,11 @@ void RFProtocolDevo::setRadioChannels(void)
 {
     mDev.findBestChannels(mRFChanBufs, 3, 4, 4, 80);
 
-    pf(F("Radio Channels:"));
+    LOG(F("Radio Channels:"));
     for (u8 i = 0; i < 3; i++) {
-        pf(F(" %02d"), mRFChanBufs[i]);
+        LOG(F(" %02d"), mRFChanBufs[i]);
     }
-    pf(F("\n"));
+    LOG(F("\n"));
 
     //Makes code a little easier to duplicate these here
     mRFChanBufs[3] = mRFChanBufs[0];
@@ -417,66 +398,71 @@ void RFProtocolDevo::buildPacket(void)
 u16 RFProtocolDevo::callStateTelemetry(void)
 {
     u8  irq;
-    u8  reg;
-    int i = 0;
-    u16 delay = 100;
+    int i;
+    u16 delay;
 
     switch (mTxState) {
         case 0:
             buildPacket();
             mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
-            delay = 900;
-            break;
+            mTxState = 1;
+            return 1200;
 
-        case 1:    
-            delay = 100;
+        case 1:
+            i = 0;
+
             do {
                 irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
                 if(++i > NUM_WAIT_LOOPS) {
-                    pf(F("MAX WAIT IRQ : %x\n"), irq);
-                    mTxState = 15;
-                    delay = 1500;
+                    LOG(F("MAX WAIT IRQ : %x\n"), irq);
                     break;
                 }
             } while (!(irq & 0x02));
 
-            if (mState == DEVO_BOUND) {
-                /* exit binding mState */
-                mState = DEVO_BOUND_3;
+            if ((irq & 0x22) == 0x20 || (mDev.readReg(CYRF_02_TX_CTRL) & 0x80) ) {
+                LOG(F("Abnormal!! RESET!!!\n"));
+                mDev.reset();
+                init1();
                 setBoundSOPCodes();
-            }
-            if (mPacketCtr == 0 || mBindCtr > 0) {
-                delay    = 1500;
-                mTxState = 15;
+                mDev.setRFChannel(*mCurRFChPtr);
             } else {
-                mDev.setTxRxMode(RX_EN);                    // Receive mode
+                if (mState == DEVO_BOUND) {
+                    /* exit binding mState */
+                    mState = DEVO_BOUND_3;
+                    setBoundSOPCodes();
+                }
+                if (mPacketCtr != 0 && mBindCtr == 0) {
+                    mDev.setTxRxMode(RX_EN);                    // Receive mode
+                    mDev.writeReg(CYRF_05_RX_CTRL, 0x80);       // Prepare to receive
+                    mTxState = 2;
+                    return 1300;
+                }
+            }
+            if (mPacketCtr == 0) {
+                //Keep tx power updated
+                mDev.setRFPower(getRFPower());
+                mCurRFChPtr = (mCurRFChPtr == &mRFChanBufs[2]) ? mRFChanBufs : (mCurRFChPtr + 1);
+                mDev.setRFChannel(*mCurRFChPtr);
+            }
+            delay = 1200;
+            break;
+
+        case 2:
+            irq = mDev.readReg(CYRF_07_RX_IRQ_STATUS);
+            if ((irq & 0x03) == 0x02) {
+                irq |= mDev.readReg(CYRF_07_RX_IRQ_STATUS);
+            }
+            if ((irq & 0x07) == 0x02) {
                 mDev.writeReg(CYRF_07_RX_IRQ_STATUS, 0x80); // Prepare to receive
-                mDev.writeReg(CYRF_05_RX_CTRL, 0x80);       // Prepare to receive (do not enable any IRQ)
-            }
-            break;
-
-        default:
-            reg = mDev.readReg(CYRF_07_RX_IRQ_STATUS);
-            if ((reg & 0x23) == 0x22) {
-                mDev.readPayload(mPacketBuf, MAX_PACKET_SIZE);
+                mDev.readPayload(mPacketBuf, mDev.readReg(CYRF_09_RX_COUNT));
                 parseTelemetryPacket(mPacketBuf);
-                delay = 100 * (16 - mTxState);
-                mTxState = 15;
             }
+            mDev.setTxRxMode(TX_EN);
+            delay = 200;
             break;
     }
+    mTxState = 0;
 
-    mTxState++;
-    if (mTxState == 16) {           // 2.3msec have passed
-        mDev.setTxRxMode(TX_EN);    // Write mode
-        if (mPacketCtr == 0) {
-            //Keep tx power updated
-            mDev.setRFPower(getRFPower());
-            mCurRFChPtr = (mCurRFChPtr == &mRFChanBufs[2]) ? mRFChanBufs : (mCurRFChPtr + 1);
-            mDev.setRFChannel(*mCurRFChPtr);
-        }
-        mTxState = 0;
-    }
     return delay;
 }
 
@@ -492,8 +478,8 @@ u16 RFProtocolDevo::callStateNormal(void)
         do {
             irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
             if(++i > NUM_WAIT_LOOPS) {
-                pf(F("MAX WAIT IRQ : %x\n"), irq);
-                return PACKET_PERIOD_uS;
+                LOG(F("MAX WAIT IRQ : %x\n"), irq);
+                return 1200;
             }
         } while (!(irq & 0x02));
 
@@ -511,12 +497,12 @@ u16 RFProtocolDevo::callStateNormal(void)
     }
     mTxState = !mTxState;
 
-    return PACKET_PERIOD_uS;
+    return 1200;
 }
 
 u16 RFProtocolDevo::callState(void)
 {
-    return callStateNormal();
+    return callStateTelemetry();
 }
 
 int RFProtocolDevo::init(void)

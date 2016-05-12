@@ -147,5 +147,11 @@ s16 RFProtocol::getControlByOrder(u8 ch)
 {
     if (ch < 4)
         ch = pgm_read_byte(TBL_ORDERS + ch);
-    return mBufControls[ch];
+
+    s16 val = mBufControls[ch];
+
+    if (ch == RFProtocol::CH_AILERON || ch == RFProtocol::CH_RUDDER)
+        val = -val;
+
+    return val;
 }

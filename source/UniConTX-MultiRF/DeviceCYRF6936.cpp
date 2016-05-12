@@ -154,7 +154,7 @@ void DeviceCYRF6936::readMfgID(u8 *data)
 
     /* Fuses power off */
     writeReg(CYRF_25_MFG_ID, 0x00);
-    dump("MFG", data, 6);
+    DUMP("MFG", data, 6);
 }
 
 void DeviceCYRF6936::setRFChannel(u8 ch)
@@ -274,7 +274,7 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
         startReceive();
         delay(10);
         rssi[i] = readReg(CYRF_13_RSSI);
-        pf("CH:%d, RSSI:%d\n", i, rssi[i]);
+        //LOG(F("CH:%d, RSSI:%d\n"), i, rssi[i]);
     }
 
     for (i = 0; i < len; i++) {
