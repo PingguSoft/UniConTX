@@ -30,6 +30,7 @@
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
 #include "RCRcvrPPM.h"
+#include "RCRcvrERSkySerial.h"
 #include "SerialProtocol.h"
 
 #define FW_VERSION  0x0120
@@ -149,6 +150,7 @@ void setup()
         }
     }
 
+    mRcvr = new RCRcvrERSkySerial();
     mRcvr->init();
 }
 
