@@ -107,7 +107,7 @@ void RCRcvrPWM::close(void)
     PCICR = ~(PCINT_RX1_IR_BIT | PCINT_RX2_IR_BIT);
 }
 
-void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
+static void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
 {
     u8  bv;
     u8  *tbl;

@@ -31,7 +31,6 @@ struct ringBuf {
 
 struct ringBuf mRxRingBuf = { {0}, 0, 0 };
 struct ringBuf mTxRingBuf = { {0}, 0, 0 };
-static u8 chkSumTX;
 
 static void putChar(struct ringBuf *buf, u8 data)
 {
@@ -55,15 +54,14 @@ static u8 getChar(struct ringBuf *buf)
     return ch;
 }
 
-static void putChar2TX(u8 data)
+static __inline void putChar2TX(u8 data)
 {
-    chkSumTX ^= data;
     putChar(&mTxRingBuf, data);
 }
 
 static __inline void flushTX(void)
 {
-    UCSR0B |= (1<<UDRIE0);
+    UCSR0B |= BV(UDRIE0);
 }
 
 static u8 sAvailable(struct ringBuf *buf)
@@ -91,7 +89,7 @@ ISR(USART_UDRE_vect)
 
     // disable transmitter UDRE interrupt
     if (tail == buf->head)
-        UCSR0B &= ~(1<<UDRIE0);
+        UCSR0B &= ~BV(UDRIE0);
 }
 #endif
 
@@ -101,18 +99,21 @@ SerialProtocol::SerialProtocol()
 
 SerialProtocol::~SerialProtocol()
 {
-    UCSR0B &= ~((1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<UDRIE0));
+    UCSR0B &= ~(BV(RXEN0) | BV(TXEN0) | BV(RXCIE0) | BV(UDRIE0));
 }
 
-void SerialProtocol::begin(u32 baud)
+void SerialProtocol::begin(u32 baud, u8 config)
 {
+    cli();
+    memset(&mRxRingBuf, 0, sizeof(mRxRingBuf));
+    memset(&mTxRingBuf, 0, sizeof(mTxRingBuf));
+
+    
+#if 0    
     u8 h = ((F_CPU  / 4 / baud -1) / 2) >> 8;
     u8 l = ((F_CPU  / 4 / baud -1) / 2);
 
-    cli();
     UCSR0B = 0;
-    memset(&mRxRingBuf, 0, sizeof(mRxRingBuf));
-    memset(&mTxRingBuf, 0, sizeof(mTxRingBuf));
 
     u8 data;
     for (u8 i = 0; i < 32; i++)
@@ -122,14 +123,46 @@ void SerialProtocol::begin(u32 baud)
     UBRR0H = h;
     UBRR0L = l;
     UCSR0B |= (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
-    UCSR0C = (1<<UCSZ00) | (1<<UCSZ01);
+    UCSR0C = conig; //(1<<UCSZ00) | (1<<UCSZ01);
+#else
+    u16 ubrr = (((F_CPU) + 8UL * (baud)) / (16UL * (baud)) -1UL);
+    u8  use_2x = 0;
+    u8  baud_tol = 2;
+
+    if (100 * (F_CPU) > (16 * ((ubrr) + 1)) * (100 * (baud) + (baud) * (baud_tol))) {
+        use_2x = 1;
+    } else if (100 * (F_CPU) < (16 * ((ubrr) + 1)) * (100 * (baud) - (baud) * (baud_tol))) {
+        use_2x = 1;
+    }
+
+    if (use_2x) {
+        ubrr =  (((F_CPU) + 4UL * (baud)) / (8UL * (baud)) -1UL);
+        if (100 * (F_CPU) > (8 * ((ubrr) + 1)) * (100 * (baud) + (baud) * (baud_tol))) {
+            // Baud rate achieved is higher than allowed !!!
+        } else if (100 * (F_CPU) < (8 * ((ubrr) + 1)) * (100 * (baud) - (baud) * (baud_tol))) {
+            // Baud rate achieved is lower than allowed !!!
+        }
+        UCSR0A |= BV(U2X0);
+    } else {
+        UCSR0A &= ~BV(U2X0);
+    }
+
+    UBRR0L = (ubrr & 0xff);
+    UBRR0H = (ubrr >> 8);
+
+	UCSR0C = config; //BV(UPM01) | BV(USBS0) | BV(UCSZ01) | BV(UCSZ00);
+	while (UCSR0A & BV(RXC0) )                      //flush receive buffer
+		UDR0;
+	//enable reception and RC complete interrupt
+	UCSR0B = BV(RXEN0) | BV(RXCIE0) | BV(TXEN0);    //rx enable and interrupt
+#endif
     sei();
 }
 
 void SerialProtocol::clearTX(void)
 {
     cli();
-    UCSR0B &= ~(1<<UDRIE0);
+    UCSR0B &= ~BV(UDRIE0);
     memset(&mTxRingBuf, 0, sizeof(mTxRingBuf));
     sei();
 }
@@ -141,6 +174,68 @@ void SerialProtocol::clearRX(void)
     sei();
 }
 
+u8 SerialProtocol::available(void)
+{
+    return sAvailable(&mRxRingBuf);
+}
+
+u8 SerialProtocol::read(void)
+{
+    return getChar(&mRxRingBuf);
+}
+
+u8 SerialProtocol::read(u8 *buf)
+{
+    u8 size = sAvailable(&mRxRingBuf);
+
+    for (u8 i = 0; i < size; i++)
+        *buf++ = getChar(&mRxRingBuf);
+
+    return size;
+}
+
+void SerialProtocol::setCallback(u32 (*callback)(u8 cmd, u8 *data, u8 size))
+{
+    mCallback = callback;
+}
+
+void SerialProtocol::handleRX(void)
+{
+    u8 rxSize = sAvailable(&mRxRingBuf);
+
+    if (rxSize == 0)
+        return;
+
+    while (rxSize--) {
+        u8 ch = getChar(&mRxRingBuf);
+
+        switch (mState) {
+            case STATE_IDLE:
+                if (ch == 0x55) {
+                    mState = STATE_HEADER_CMD;
+                    mOffset = 0;
+                    mDataSize = 25;
+                }
+                break;
+
+            case STATE_HEADER_CMD:
+                if (mOffset < mDataSize) {
+                    mRxPacket[mOffset++] = ch;
+                } else {
+                    if (mCallback)
+                        (*mCallback)(mRxPacket, mDataSize);
+                    mState = STATE_IDLE;
+                    rxSize = 0;             // no more than one command per cycle
+                }
+                break;
+        }
+    }
+}
+
+
+//
+// Utility functions for debugging
+//
 void SerialProtocol::printf(const __FlashStringHelper *fmt, ...)
 {
     char buf[128]; // resulting string limited to 128 chars
@@ -204,115 +299,3 @@ void SerialProtocol::dumpHex(char *name, u8 *data, u16 cnt)
     }
 }
 
-u8 SerialProtocol::getString(u8 *buf)
-{
-    u8 size = sAvailable(&mRxRingBuf);
-
-    for (u8 i = 0; i < size; i++)
-        *buf++ = getChar(&mRxRingBuf);
-
-    return size;
-}
-
-u8 SerialProtocol::available(void)
-{
-    return sAvailable(&mRxRingBuf);
-}
-
-u8 SerialProtocol::read(void)
-{
-    return getChar(&mRxRingBuf);
-}
-
-void SerialProtocol::setCallback(u32 (*callback)(u8 cmd, u8 *data, u8 size))
-{
-    mCallback = callback;
-}
-
-void SerialProtocol::sendResponse(bool ok, u8 cmd, u8 *data, u8 size)
-{
-    putChar2TX('$');
-    putChar2TX('M');
-    putChar2TX((ok ? '>' : '!'));
-    chkSumTX = 0;
-    putChar2TX(size);
-    putChar2TX(cmd);
-    for (u8 i = 0; i < size; i++)
-        putChar2TX(*data++);
-    putChar2TX(chkSumTX);
-    flushTX();
-}
-
-void SerialProtocol::evalCommand(u8 cmd, u8 *data, u8 size)
-{
-    static u8 batt = 0;
-
-    switch (cmd) {
-        case CMD_TEST:
-            u8 buf[7];
-            buf[0] = batt++;
-            sendResponse(true, cmd, buf, 7);
-            break;
-
-        default:
-            if (mCallback)
-                (*mCallback)(cmd, data, size);
-            break;
-    }
-}
-
-void SerialProtocol::handleRX(void)
-{
-    u8 rxSize = sAvailable(&mRxRingBuf);
-
-    if (rxSize == 0)
-        return;
-
-    while (rxSize--) {
-        u8 ch = getChar(&mRxRingBuf);
-
-        switch (mState) {
-            case STATE_IDLE:
-                if (ch == '$')
-                    mState = STATE_HEADER_START;
-                break;
-
-            case STATE_HEADER_START:
-                mState = (ch == 'M') ? STATE_HEADER_M : STATE_IDLE;
-                break;
-
-            case STATE_HEADER_M:
-                mState = (ch == '<') ? STATE_HEADER_ARROW : STATE_IDLE;
-                break;
-
-            case STATE_HEADER_ARROW:
-                if (ch > MAX_PACKET_SIZE) { // now we are expecting the payload size
-                    mState = STATE_IDLE;
-                    continue;
-                }
-                mDataSize = ch;
-                mCheckSum = ch;
-                mOffset   = 0;
-                mState    = STATE_HEADER_SIZE;
-                break;
-
-            case STATE_HEADER_SIZE:
-                mCmd       = ch;
-                mCheckSum ^= ch;
-                mState     = STATE_HEADER_CMD;
-                break;
-
-            case STATE_HEADER_CMD:
-                if (mOffset < mDataSize) {
-                    mCheckSum           ^= ch;
-                    mRxPacket[mOffset++] = ch;
-                } else {
-                    if (mCheckSum == ch)
-                        evalCommand(mCmd, mRxPacket, mDataSize);
-                    mState = STATE_IDLE;
-                    rxSize = 0;             // no more than one command per cycle
-                }
-                break;
-        }
-    }
-}

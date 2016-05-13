@@ -29,7 +29,7 @@
 // TREA1234
 static s16 sRC[CH_CNT];
 
-void calcPPM();
+static void calcPPM();
 
 s16 RCRcvrPPM::getRC(u8 ch)
 {
@@ -73,7 +73,7 @@ void RCRcvrPPM::close(void)
     detachInterrupt(PIN_PPM - 2);
 }
 
-void calcPPM()
+static void calcPPM()
 {
     static u8   ch;
     static u32  lastTS;

@@ -268,7 +268,7 @@ void RFProtocolSyma::init1(void)
 
     __PRINT_FUNC__;
     mDev.initialize();
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     mDev.readReg(NRF24L01_07_STATUS);
 
     if (getProtocolOpt() == PROTO_OPT_X5C_X2) {

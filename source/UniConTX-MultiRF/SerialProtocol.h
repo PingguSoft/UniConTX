@@ -41,7 +41,7 @@ public:
     SerialProtocol();
     ~SerialProtocol();
 
-    void begin(u32 baud);
+    void begin(u32 baud, u8 config=SERIAL_8N1);
     void handleRX(void);
     void sendResponse(bool ok, u8 cmd, u8 *data, u8 size);
     void evalCommand(u8 cmd, u8 *data, u8 size);
@@ -52,6 +52,7 @@ public:
     void clearRX(void);
     u8   available(void);
     u8   read(void);
+    u8   read(u8 *buf);
     
     static void printf(char *fmt, ... );
     static void printf(const __FlashStringHelper *fmt, ... );
@@ -75,9 +76,7 @@ private:
     u8   mState;
     u8   mOffset;
     u8   mDataSize;
-    u8   mCheckSum;
-    u8   mCmd;
-    u32  (*mCallback)(u8 cmd, u8 *data, u8 size);
+    u32  (*mCallback)(u8 *data, u8 size);
 };
 
 #endif

@@ -65,7 +65,7 @@ static u8 initProtocol(u32 id)
         mRFProto = NULL;
     }
     switch (RFProtocol::getModule(id)) {
-        case RFProtocol::TX_NRF24L01: {
+        case TX_NRF24L01: {
             ret = 1;
             switch (RFProtocol::getProtocol(id)) {
                 case RFProtocol::PROTO_NRF24L01_SYMAX:
@@ -83,10 +83,11 @@ static u8 initProtocol(u32 id)
                 case RFProtocol::PROTO_NRF24L01_HISKY:
                     mRFProto = new RFProtocolHiSky(id);
                     break;
-
+/*
                 case RFProtocol::PROTO_NRF24L01_CFLIE:
                     mRFProto = new RFProtocolCFlie(id);
                     break;
+*/                    
                 default:
                     ret = 0;
                     break;
@@ -94,12 +95,12 @@ static u8 initProtocol(u32 id)
         }
         break;
 
-        case RFProtocol::TX_CYRF6936:
+        case TX_CYRF6936:
             mRFProto = new RFProtocolDevo(id);
             ret = 1;
             break;
 
-        case RFProtocol::TX_A7105: {
+        case TX_A7105: {
             ret = 1;
             switch (RFProtocol::getProtocol(id)) {
                 case RFProtocol::PROTO_A7105_FLYSKY:
@@ -134,8 +135,8 @@ void setup()
     mRcvr.init();
 
     conf.dwSignature = 0xCAFEBABE;
-    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
-//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
+    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_100mW;
 

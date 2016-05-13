@@ -18,12 +18,20 @@
 #include "DeviceCYRF6936.h"
 #include "Utils.h"
 
+#define CYRF_CS_HI()    digitalWrite(PIN_CYRF_CSN, HIGH);
+#define CYRF_CS_LO()    digitalWrite(PIN_CYRF_CSN, LOW);
+#define CYRF_RST_HI()   digitalWrite(PIN_CYRF_RESET, HIGH);
+#define CYRF_RST_LO()   digitalWrite(PIN_CYRF_RESET, LOW);
+
+DeviceCYRF6936::DeviceCYRF6936()
+{
+    initialize();
+}
+
 void DeviceCYRF6936::initialize()
 {
-    INIT_COMMON();
-    RF_SEL_6936();
-
-    SPI.begin();
+    setRFSwitch(TX_CYRF6936);
+    
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     //SPI.setClockDivider(SPI_CLOCK_DIV2);
@@ -34,13 +42,11 @@ void DeviceCYRF6936::initialize()
     delay(100);
 }
 
-#define PROTOSPI_xfer   SPI.transfer
-
 u8 DeviceCYRF6936::writeReg(u8 reg, u8 data)
 {
     CYRF_CS_LO();
-    u8 res = PROTOSPI_xfer(0x80 | reg);
-    PROTOSPI_xfer(data);
+    u8 res = SPI.transfer(0x80 | reg);
+    SPI.transfer(data);
     CYRF_CS_HI();
     return res;
 }
@@ -48,9 +54,9 @@ u8 DeviceCYRF6936::writeReg(u8 reg, u8 data)
 u8 DeviceCYRF6936::writeRegMulti(u8 reg, const u8 *data, u8 length)
 {
     CYRF_CS_LO();
-    u8 res = PROTOSPI_xfer(0x80 | reg);
+    u8 res = SPI.transfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
-        PROTOSPI_xfer(data[i]);
+        SPI.transfer(data[i]);
     }
     CYRF_CS_HI();
     return res;
@@ -59,9 +65,9 @@ u8 DeviceCYRF6936::writeRegMulti(u8 reg, const u8 *data, u8 length)
 u8 DeviceCYRF6936::writeRegMulti_P(u8 reg, const u8 *data, u8 length)
 {
     CYRF_CS_LO();
-    u8 res = PROTOSPI_xfer(0x80 | reg);
+    u8 res = SPI.transfer(0x80 | reg);
     for (u8 i = 0; i < length; i++) {
-        PROTOSPI_xfer(pgm_read_byte(data + i));
+        SPI.transfer(pgm_read_byte(data + i));
     }
     CYRF_CS_HI();
     return res;
@@ -70,8 +76,8 @@ u8 DeviceCYRF6936::writeRegMulti_P(u8 reg, const u8 *data, u8 length)
 u8 DeviceCYRF6936::readReg(u8 reg)
 {
     CYRF_CS_LO();
-    PROTOSPI_xfer(reg);
-    u8 data = PROTOSPI_xfer(0);
+    SPI.transfer(reg);
+    u8 data = SPI.transfer(0);
     CYRF_CS_HI();
     return data;
 }
@@ -79,9 +85,9 @@ u8 DeviceCYRF6936::readReg(u8 reg)
 u8 DeviceCYRF6936::readRegMulti(u8 reg, u8 *data, u8 length)
 {
     CYRF_CS_LO();
-    u8 res = PROTOSPI_xfer(reg);
+    u8 res = SPI.transfer(reg);
     for(u8 i = 0; i < length; i++) {
-        *data++ = PROTOSPI_xfer(0);
+        *data++ = SPI.transfer(0);
     }
     CYRF_CS_HI();
     return res;
@@ -90,7 +96,7 @@ u8 DeviceCYRF6936::readRegMulti(u8 reg, u8 *data, u8 length)
 u8 DeviceCYRF6936::strobe(u8 state)
 {
     CYRF_CS_LO();
-    u8 res = PROTOSPI_xfer(state);
+    u8 res = SPI.transfer(state);
     CYRF_CS_HI();
     return res;
 }
@@ -103,21 +109,18 @@ u8 DeviceCYRF6936::setRFPower(u8 power)
     return val;
 }
 
-void DeviceCYRF6936::setTxRxMode(enum TXRX_State mode)
+void DeviceCYRF6936::setRFModeImpl(enum RF_MODE mode)
 {
     u8 mod;
     u8 gpio;
 
-   if(mode == TX_EN) {
-        RFX_TX();
+   if(mode == RF_TX) {
         mod  = 0x28;        // force SYNTH MODE (8) = TX
         gpio = 0x80;        // XOUT(7)=1, PACTL(5)=0       XOUT is a switch for TX
-    } else if (mode == RX_EN) {
-        RFX_RX();
+    } else if (mode == RF_RX) {
         mod  = 0x2C;        // force SYNTH MODE (C) = RX
         gpio = 0x20;        // XOUT(7)=0, PACTL(5)=1       PACTL is a switch for RX
     } else {
-        RFX_IDLE();
         mod  = 0x24;        // force IDLE
         gpio = 0x00;
     }
@@ -139,7 +142,7 @@ int DeviceCYRF6936::reset()
     /* Reset the CYRF chip */
     writeReg(CYRF_0C_XTAL_CTRL, 0xC0);  // Enable XOUT as GPIO
     writeReg(CYRF_0D_IO_CFG, 0x04);     // Enable PACTL as GPIO
-    setTxRxMode(TXRX_OFF);
+    setRFMode(RF_IDLE);
 
     //Verify the CYRD chip is responding
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
@@ -196,10 +199,10 @@ void DeviceCYRF6936::setDataCode(u8 *datacodes, u8 len)
 void DeviceCYRF6936::writePreamble(u32 preamble)
 {
     CYRF_CS_LO();
-    PROTOSPI_xfer(0x80 | 0x24);
-    PROTOSPI_xfer(preamble & 0xff);
-    PROTOSPI_xfer((preamble >> 8) & 0xff);
-    PROTOSPI_xfer((preamble >> 16) & 0xff);
+    SPI.transfer(0x80 | 0x24);
+    SPI.transfer(preamble & 0xff);
+    SPI.transfer((preamble >> 8) & 0xff);
+    SPI.transfer((preamble >> 16) & 0xff);
     CYRF_CS_HI();
 }
 
@@ -265,7 +268,7 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
     memset(channels, 0, sizeof(u8) * len);
 
     setCRCSeed(0x0000);
-    setTxRxMode(RX_EN);
+    setRFMode(RF_RX);
     //Wait for pre-amp to switch from send to receive
     delay(1000);
     for(i = 0; i < NUM_FREQ; i++) {
@@ -292,5 +295,5 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
             rssi[j] = 0xff;
         }
     }
-    setTxRxMode(TX_EN);
+    setRFMode(RF_TX);
 }

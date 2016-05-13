@@ -40,8 +40,6 @@ enum PktState {
     DEVO_BOUND_10,
 };
 
-//#define __PRINT_FUNC__      LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
-
 static const PROGMEM u8 SOPCODES[][8] = {
     /* Note these are in order transmitted (LSB 1st) */
     /* 0 */ {0x3C,0x37,0xCC,0x91,0xE2,0xF8,0xCC,0x91}, //0x91CCF8E291CC373C
@@ -270,7 +268,7 @@ void RFProtocolDevo::setBoundSOPCodes(void)
 
     if(!crc)
         crc = 1;
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     mDev.setCRCSeed((crc << 8) + crc);
     mDev.setSOPCode_P(SOPCODES[sopidx]);
     mDev.setRFPower(getRFPower());
@@ -432,8 +430,8 @@ u16 RFProtocolDevo::callStateTelemetry(void)
                     setBoundSOPCodes();
                 }
                 if (mPacketCtr != 0 && mBindCtr == 0) {
-                    mDev.setTxRxMode(RX_EN);                    // Receive mode
-                    mDev.writeReg(CYRF_05_RX_CTRL, 0x80);       // Prepare to receive
+                    mDev.setRFMode(RF_RX);                  // Receive mode
+                    mDev.writeReg(CYRF_05_RX_CTRL, 0x80);   // Prepare to receive
                     mTxState = 2;
                     return 1300;
                 }
@@ -457,7 +455,7 @@ u16 RFProtocolDevo::callStateTelemetry(void)
                 mDev.readPayload(mPacketBuf, mDev.readReg(CYRF_09_RX_COUNT));
                 parseTelemetryPacket(mPacketBuf);
             }
-            mDev.setTxRxMode(TX_EN);
+            mDev.setRFMode(RF_TX);
             delay = 200;
             break;
     }
@@ -510,7 +508,7 @@ int RFProtocolDevo::init(void)
     init1();
 
     mDev.readMfgID(mMfgIDBuf);
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     mDev.setCRCSeed(0x0000);
     mDev.setSOPCode_P(SOPCODES[0]);
     setRadioChannels();
@@ -518,8 +516,6 @@ int RFProtocolDevo::init(void)
     mBoolFixedID = 0;
     failsafe_pkt = 0;
     mCurRFChPtr = mRFChanBufs;
-//    memset(&Telemetry, 0, sizeof(Telemetry));
-
     mDev.setRFChannel(*mCurRFChPtr);
 
     //num_channels = ((Model.num_channels + 3) >> 2) * 4;
@@ -535,7 +531,6 @@ int RFProtocolDevo::init(void)
         mFixedID = mFixedID % 1000000;
         mBindCtr = MAX_BIND_COUNT;
         mState   = DEVO_BIND;
-        //PROTOCOL_SetBindState(0x1388 * 2400 / 1000); //msecs
     } else {
         //mFixedID = Model.mFixedID;
         mBoolFixedID = 1;

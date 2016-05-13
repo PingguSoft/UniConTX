@@ -85,7 +85,7 @@ u8 RFProtocolYD717::getControl(u8 id)
 void RFProtocolYD717::getControls(u8* throttle, u8* rudder, u8* elevator, u8* aileron,
                           u8* flags, u8* rudder_trim, u8* elevator_trim, u8* aileron_trim)
 {
-    // RFProtocol is registered AETRF, that is
+    // Protocol is registered AETRF, that is
     // Aileron is channel 1, Elevator - 2, Throttle - 3, Rudder - 4, Flip control - 5
 
     // Channel 3
@@ -159,12 +159,14 @@ void RFProtocolYD717::sendPacket(u8 bind)
 
     // clear mPacketBuf status bits and TX FIFO
     mDev.writeReg(NRF24L01_07_STATUS, (BV(NRF24L01_07_TX_DS) | BV(NRF24L01_07_MAX_RT)));
+    mDev.flushTx();
 
     if(getProtocolOpt() == PROTO_OPT_YD717) {
         mDev.writePayload(mPacketBuf, 8);
     } else {
         mPacketBuf[8] = mPacketBuf[0];  // checksum
-        for(u8 i=1; i < 8; i++) mPacketBuf[8] += mPacketBuf[i];
+        for(u8 i=1; i < 8; i++) 
+            mPacketBuf[8] += mPacketBuf[i];
         mPacketBuf[8] = ~mPacketBuf[8];
         mDev.writePayload(mPacketBuf, 9);
     }
@@ -235,7 +237,7 @@ void RFProtocolYD717::init1(void)
     u8 val;
     
     mDev.initialize();
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) ; i++) {
         if (i == NRF24L01_06_RF_SETUP) {
             mDev.setBitrate(NRF24L01_BR_1M);
@@ -264,12 +266,16 @@ void RFProtocolYD717::init2(void)
     // for bind packets set address to prearranged value known to receiver
     u8 bind_rx_tx_addr[5];
     
-    if (getProtocolOpt() == PROTO_OPT_SYMA_X4)
-        for(u8 i=0; i < 5; i++) bind_rx_tx_addr[i]  = 0x60;
-    else if (getProtocolOpt() == PROTO_OPT_NI_HUI)
-        for(u8 i=0; i < 5; i++) bind_rx_tx_addr[i]  = 0x64;
-    else
-        for(u8 i=0; i < 5; i++) bind_rx_tx_addr[i]  = 0x65;
+    if (getProtocolOpt() == PROTO_OPT_SYMA_X4) {
+        for (u8 i=0; i < 5; i++) 
+            bind_rx_tx_addr[i]  = 0x60;
+    } else if (getProtocolOpt() == PROTO_OPT_NI_HUI) {
+        for( u8 i=0; i < 5; i++) 
+            bind_rx_tx_addr[i]  = 0x64;
+    } else {
+        for (u8 i=0; i < 5; i++) 
+            bind_rx_tx_addr[i]  = 0x65;
+    }
 
     mDev.writeRegMulti(NRF24L01_0A_RX_ADDR_P0, bind_rx_tx_addr, 5);
     mDev.writeRegMulti(NRF24L01_10_TX_ADDR, bind_rx_tx_addr, 5);

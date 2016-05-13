@@ -32,12 +32,6 @@ public:
     };
 
     enum {
-        TX_NRF24L01,
-        TX_A7105,
-        TX_CYRF6936,
-    };
-
-    enum {
         PROTO_NRF24L01_V2x2,
         PROTO_NRF24L01_HISKY,
         PROTO_NRF24L01_YD717,

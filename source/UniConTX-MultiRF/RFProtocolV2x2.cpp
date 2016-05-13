@@ -321,7 +321,7 @@ void RFProtocolV2x2::init1(void)
 void RFProtocolV2x2::init2(void)
 {
     mDev.flushTx();
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     u8 config = BV(NRF24L01_00_EN_CRC) | BV(NRF24L01_00_CRCO) | BV(NRF24L01_00_PWR_UP);
     mDev.writeReg(NRF24L01_00_CONFIG, config);
 

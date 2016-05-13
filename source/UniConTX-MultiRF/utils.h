@@ -33,12 +33,15 @@ u32  rand32();
         void LOG(const __FlashStringHelper *fmt, ... );
         void DUMP(char *name, u8 *data, u16 cnt);
     #else
-        #define LOG      SerialProtocol::printf
+        #define LOG     SerialProtocol::printf
         #define DUMP    SerialProtocol::dumpHex
     #endif
+
+    #define __PRINT_FUNC__  LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 #else
     #define LOG(...)
     #define DUMP(...)
+    #define __PRINT_FUNC__
 #endif
 
 #endif

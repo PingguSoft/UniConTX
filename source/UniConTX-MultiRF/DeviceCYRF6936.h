@@ -77,9 +77,11 @@ enum CYRF_PWR {
     CYRF_PWR_DEFAULT,
 };
 
-class DeviceCYRF6936
+class DeviceCYRF6936 : public DeviceCommon
 {
 public:
+    DeviceCYRF6936();
+    
     void initialize();
     int  reset();
     u8   writeReg(u8 reg, u8 data);
@@ -88,7 +90,6 @@ public:
     u8   readReg(u8 reg);
     u8   readRegMulti(u8 reg, u8 *data, u8 length);
     u8   setRFPower(u8 power);
-    void setTxRxMode(enum TXRX_State);
     void readMfgID(u8 *data);
     void setRFChannel(u8 ch);
     void setCRCSeed(u16 crc);
@@ -103,9 +104,7 @@ public:
     u8   readRSSI(u32 dodummyread);
     void findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min, u8 max);
 
-// To enable radio transmit after WritePayload you need to turn the radio
-//void PulseCE();
-
+    virtual void setRFModeImpl(enum RF_MODE mode);
 private:
     u8   strobe(u8 state);
 

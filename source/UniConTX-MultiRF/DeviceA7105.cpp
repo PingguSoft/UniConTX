@@ -17,25 +17,28 @@
 #include <SPI.h>
 #include "DeviceA7105.h"
 
+#define A7105_CS_HI()   digitalWrite(PIN_CSN_7105, HIGH);
+#define A7105_CS_LO()   digitalWrite(PIN_CSN_7105, LOW);
+
+DeviceA7105::DeviceA7105()
+{
+    initialize();
+}
 
 void DeviceA7105::initialize()
 {
-    INIT_COMMON();
-    RF_SEL_7105();
-
-    SPI.begin();
+    setRFSwitch(TX_A7105);
+    
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     SPI.setClockDivider(SPI_CLOCK_DIV2);
 }
 
-#define PROTOSPI_xfer   SPI.transfer
-
 u8 DeviceA7105::writeReg(u8 reg, u8 data)
 {
     A7105_CS_LO();
-    u8 res = PROTOSPI_xfer(reg);
-    PROTOSPI_xfer(data);
+    u8 res = SPI.transfer(reg);
+    SPI.transfer(data);
     A7105_CS_HI();
 
     return res;
@@ -46,16 +49,16 @@ u8 DeviceA7105::writeData(const u8 *data, u8 length, u8 channel)
     u8 i;
 
     A7105_CS_LO();
-    PROTOSPI_xfer(A7105_RST_WRPTR);
-    u8 res = PROTOSPI_xfer(0x05);
+    SPI.transfer(A7105_RST_WRPTR);
+    u8 res = SPI.transfer(0x05);
     for (i = 0; i < length; i++)
-        PROTOSPI_xfer(*data++);
+        SPI.transfer(*data++);
     A7105_CS_HI();
 
     writeReg(0x0F, channel);
 
     A7105_CS_LO();
-    PROTOSPI_xfer(A7105_TX);
+    SPI.transfer(A7105_TX);
     A7105_CS_HI();
 
     return res;
@@ -65,16 +68,16 @@ u8 DeviceA7105::writeData_P(const u8 *data, u8 length,  u8 channel)
 {
     int i;
     A7105_CS_LO();
-    PROTOSPI_xfer(A7105_RST_WRPTR);
-    u8 res = PROTOSPI_xfer(0x05);
+    SPI.transfer(A7105_RST_WRPTR);
+    u8 res = SPI.transfer(0x05);
     for (i = 0; i < length; i++)
-        PROTOSPI_xfer(pgm_read_byte(data++));
+        SPI.transfer(pgm_read_byte(data++));
     A7105_CS_HI();
 
     writeReg(0x0F, channel);
 
     A7105_CS_LO();
-    PROTOSPI_xfer(A7105_TX);
+    SPI.transfer(A7105_TX);
     A7105_CS_HI();
 
     return res;
@@ -83,8 +86,8 @@ u8 DeviceA7105::writeData_P(const u8 *data, u8 length,  u8 channel)
 u8 DeviceA7105::readReg(u8 reg)
 {
     A7105_CS_LO();
-    PROTOSPI_xfer(0x40 | reg);
-    u8 data = PROTOSPI_xfer(0xFF);
+    SPI.transfer(0x40 | reg);
+    u8 data = SPI.transfer(0xFF);
     A7105_CS_HI();
     return data;
 }
@@ -100,7 +103,7 @@ u8 DeviceA7105::readData(u8 *data, u8 length)
 u8 DeviceA7105::strobe(u8 state)
 {
     A7105_CS_LO();
-    u8 res = PROTOSPI_xfer(state);
+    u8 res = SPI.transfer(state);
     A7105_CS_HI();
     return res;
 }
@@ -133,24 +136,21 @@ u8 DeviceA7105::setRFPower(u8 power)
     return writeReg(0x28, (pac << 3) | tbg);
 }
 
-void DeviceA7105::setTxRxMode(enum TXRX_State mode)
+void DeviceA7105::setRFModeImpl(enum RF_MODE mode)
 {
-    if(mode == TX_EN) {
+    if(mode == RF_TX) {
 //        writeReg(A7105_0B_GPIO1_PIN1, 0x33);
 //        writeReg(A7105_0C_GPIO2_PIN_II, 0x31);
-        RFX_TX();
-    } else if (mode == RX_EN) {
+    } else if (mode == RF_RX) {
 //        writeReg(A7105_0B_GPIO1_PIN1, 0x31);
 //        writeReg(A7105_0C_GPIO2_PIN_II, 0x33);
-        RFX_RX();
     } else {
-        //The A7105 seems to some with a cross-wired power-amp (A7700)
-        //On the XL7105-D03, TX_EN -> RXSW and RX_EN -> TXSW
-        //This means that sleep mode is wired as RX_EN = 1 and TX_EN = 1
+        //The TX_A7105 seems to some with a cross-wired power-amp (A7700)
+        //On the XL7105-D03, RF_TX -> RXSW and RF_RX -> TXSW
+        //This means that sleep mode is wired as RF_RX = 1 and RF_TX = 1
         //If there are other amps in use, we'll need to fix this
 //        writeReg(A7105_0B_GPIO1_PIN1, 0x33);
 //        writeReg(A7105_0C_GPIO2_PIN_II, 0x33);
-        RFX_IDLE();
     }
 }
 
@@ -162,7 +162,7 @@ int DeviceA7105::reset()
     // enable 4 wires SPI, GIO1 is connected to MISO
     writeReg(A7105_0B_GPIO1_PIN1, 0x19);
 
-    setTxRxMode(TXRX_OFF);
+    setRFMode(RF_IDLE);
     int res = (readReg(0x10) == 0x9E);
     strobe(A7105_STANDBY);
     return res;
@@ -171,10 +171,10 @@ int DeviceA7105::reset()
 void DeviceA7105::writeID(u32 id)
 {
     A7105_CS_LO();
-    PROTOSPI_xfer(0x06);
-    PROTOSPI_xfer((id >> 24) & 0xFF);
-    PROTOSPI_xfer((id >> 16) & 0xFF);
-    PROTOSPI_xfer((id >> 8) & 0xFF);
-    PROTOSPI_xfer((id >> 0) & 0xFF);
+    SPI.transfer(0x06);
+    SPI.transfer((id >> 24) & 0xFF);
+    SPI.transfer((id >> 16) & 0xFF);
+    SPI.transfer((id >> 8) & 0xFF);
+    SPI.transfer((id >> 0) & 0xFF);
     A7105_CS_HI();
 }

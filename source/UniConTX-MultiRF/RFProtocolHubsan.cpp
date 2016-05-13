@@ -140,7 +140,7 @@ int RFProtocolHubsan::init1(void)
 
     //Reset VCO Band calibration
     //mDev.writeReg(0x25, 0x08);
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     mDev.setRFPower(getRFPower());
     mDev.strobe(A7105_STANDBY);
 
@@ -270,7 +270,7 @@ u16 RFProtocolHubsan::callState(void)
             }
             //if (i == 20)
             //    printf("Failed to complete write\n");
-            mDev.setTxRxMode(RX_EN);
+            mDev.setRFMode(RF_RX);
             mDev.strobe(A7105_RX);
             mState &= ~WAIT_WRITE;
             mState++;
@@ -279,7 +279,7 @@ u16 RFProtocolHubsan::callState(void)
         case BIND_2:
         case BIND_4:
         case BIND_6:
-            mDev.setTxRxMode(TX_EN);
+            mDev.setRFMode(RF_TX);
             if(mDev.readReg(A7105_00_MODE) & 0x01) {
                 mState = BIND_1;
                 return 4500;                        //No signal, restart binding procedure.  12msec elapsed since last write
@@ -295,7 +295,7 @@ u16 RFProtocolHubsan::callState(void)
             return 500;                             //8msec elapsed time since last write;
 
         case BIND_8:
-            mDev.setTxRxMode(TX_EN);
+            mDev.setRFMode(RF_TX);
             if (mDev.readReg(A7105_00_MODE) & 0x01) {
                 mState = BIND_7;
                 return 15000;                       //22.5msec elapsed since last write
@@ -334,7 +334,7 @@ u16 RFProtocolHubsan::callState(void)
                     if (rfMode == A7105_TX) {                           // switch to rx mode 3ms after mPacketBuf sent
                         for (i = 0; i < 10; i++) {
                             if (!(mDev.readReg(A7105_00_MODE) & 0x01)) {// wait for tx completion
-                                mDev.setTxRxMode(RX_EN);
+                                mDev.setRFMode(RF_RX);
                                 mDev.strobe(A7105_RX); 
                                 rfMode = A7105_RX;
                                 break;
@@ -356,7 +356,7 @@ u16 RFProtocolHubsan::callState(void)
             }
             
             if (++txState == 8) { // 3ms + 7 * 1ms = 10ms
-                mDev.setTxRxMode(TX_EN);
+                mDev.setRFMode(RF_TX);
                 txState = 0;
             }
             return delay;

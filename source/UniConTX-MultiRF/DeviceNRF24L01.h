@@ -96,9 +96,11 @@ enum {
 };
 
 
-class DeviceNRF24L01
+class DeviceNRF24L01 : public DeviceCommon
 {
 public:
+    DeviceNRF24L01();
+    
     void initialize();
     int  reset();
     u8   writeReg(u8 reg, u8 data);
@@ -115,10 +117,8 @@ public:
     // Bitrate 0 - 1Mbps, 1 - 2Mbps, 3 - 250K (for nRF24L01+)
     u8   setBitrate(u8 bitrate);
     u8   setRFPower(u8 power);
-    void setTxRxMode(enum TXRX_State);
 
-// To enable radio transmit after WritePayload you need to turn the radio
-//void PulseCE();
+    virtual void setRFModeImpl(enum RF_MODE mode);
 
 private:
     u8   strobe(u8 state);

@@ -93,9 +93,11 @@ enum A7105_MASK {
     A7105_MASK_VBCF = 1 << 3,
 };
 
-class DeviceA7105
+class DeviceA7105 : public DeviceCommon
 {
 public:
+    DeviceA7105();
+    
     void initialize();
     int  reset();
     u8   writeReg(u8 reg, u8 data);
@@ -104,13 +106,10 @@ public:
     u8   readReg(u8 reg);
     u8   readData(u8 *data, u8 length);
     u8   setRFPower(u8 power);
-    void setTxRxMode(enum TXRX_State);
     void writeID(u32 id);
     u8   strobe(u8 state);
 
-// To enable radio transmit after WritePayload you need to turn the radio
-//void PulseCE();
-
+    virtual void setRFModeImpl(enum RF_MODE mode);
 private:
 
 // variables

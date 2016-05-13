@@ -160,7 +160,7 @@ int RFProtocolFlysky::init1(void)
 
     //Reset VCO Band calibration
     mDev.writeReg(0x25, 0x08);
-    mDev.setTxRxMode(TX_EN);
+    mDev.setRFMode(RF_TX);
     mDev.setRFPower(getRFPower());
     mDev.strobe(A7105_STANDBY);
 
