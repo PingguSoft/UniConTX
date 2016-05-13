@@ -24,9 +24,9 @@
 #define MAX_BUF_SIZE 64
 
 struct ringBuf {
-    u8 buffer[MAX_BUF_SIZE];
-    u8 head;
-    u8 tail;
+    volatile u8 buffer[MAX_BUF_SIZE];
+    volatile u8 head;
+    volatile u8 tail;
 };
 
 struct ringBuf mRxRingBuf = { {0}, 0, 0 };
@@ -34,7 +34,22 @@ struct ringBuf mTxRingBuf = { {0}, 0, 0 };
 
 static void putChar(struct ringBuf *buf, u8 data)
 {
-    u8 head = buf->head;
+    u8 head;
+    u8 tail;
+    u8 free;
+
+    do {
+        head = buf->head;
+        tail = buf->tail;
+
+        if (head >= tail)
+            free = MAX_BUF_SIZE - 1 - head + tail;
+        else
+            free = tail - head - 1;
+
+        if (free == 0)
+            delayMicroseconds(10);
+    } while (free == 0);
 
     buf->buffer[head] = data;
     if (++head >= MAX_BUF_SIZE)
@@ -104,27 +119,9 @@ SerialProtocol::~SerialProtocol()
 
 void SerialProtocol::begin(u32 baud, u8 config)
 {
-    cli();
     memset(&mRxRingBuf, 0, sizeof(mRxRingBuf));
     memset(&mTxRingBuf, 0, sizeof(mTxRingBuf));
 
-    
-#if 0    
-    u8 h = ((F_CPU  / 4 / baud -1) / 2) >> 8;
-    u8 l = ((F_CPU  / 4 / baud -1) / 2);
-
-    UCSR0B = 0;
-
-    u8 data;
-    for (u8 i = 0; i < 32; i++)
-        data = UDR0;
-
-    UCSR0A = (1<<U2X0);
-    UBRR0H = h;
-    UBRR0L = l;
-    UCSR0B |= (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
-    UCSR0C = conig; //(1<<UCSZ00) | (1<<UCSZ01);
-#else
     u16 ubrr = (((F_CPU) + 8UL * (baud)) / (16UL * (baud)) -1UL);
     u8  use_2x = 0;
     u8  baud_tol = 2;
@@ -135,6 +132,7 @@ void SerialProtocol::begin(u32 baud, u8 config)
         use_2x = 1;
     }
 
+    cli();
     if (use_2x) {
         ubrr =  (((F_CPU) + 4UL * (baud)) / (8UL * (baud)) -1UL);
         if (100 * (F_CPU) > (8 * ((ubrr) + 1)) * (100 * (baud) + (baud) * (baud_tol))) {
@@ -149,13 +147,13 @@ void SerialProtocol::begin(u32 baud, u8 config)
 
     UBRR0L = (ubrr & 0xff);
     UBRR0H = (ubrr >> 8);
+	UCSR0C = config;
 
-	UCSR0C = config; //BV(UPM01) | BV(USBS0) | BV(UCSZ01) | BV(UCSZ00);
-	while (UCSR0A & BV(RXC0) )                      //flush receive buffer
-		UDR0;
+    while (UCSR0A & BV(RXC0) )                      //flush receive buffer
+		u8 data = UDR0;
+
 	//enable reception and RC complete interrupt
 	UCSR0B = BV(RXEN0) | BV(RXCIE0) | BV(TXEN0);    //rx enable and interrupt
-#endif
     sei();
 }
 
@@ -192,44 +190,6 @@ u8 SerialProtocol::read(u8 *buf)
         *buf++ = getChar(&mRxRingBuf);
 
     return size;
-}
-
-void SerialProtocol::setCallback(u32 (*callback)(u8 cmd, u8 *data, u8 size))
-{
-    mCallback = callback;
-}
-
-void SerialProtocol::handleRX(void)
-{
-    u8 rxSize = sAvailable(&mRxRingBuf);
-
-    if (rxSize == 0)
-        return;
-
-    while (rxSize--) {
-        u8 ch = getChar(&mRxRingBuf);
-
-        switch (mState) {
-            case STATE_IDLE:
-                if (ch == 0x55) {
-                    mState = STATE_HEADER_CMD;
-                    mOffset = 0;
-                    mDataSize = 25;
-                }
-                break;
-
-            case STATE_HEADER_CMD:
-                if (mOffset < mDataSize) {
-                    mRxPacket[mOffset++] = ch;
-                } else {
-                    if (mCallback)
-                        (*mCallback)(mRxPacket, mDataSize);
-                    mState = STATE_IDLE;
-                    rxSize = 0;             // no more than one command per cycle
-                }
-                break;
-        }
-    }
 }
 
 

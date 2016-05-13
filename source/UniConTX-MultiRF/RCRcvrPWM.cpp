@@ -56,25 +56,6 @@ static const PROGMEM u8 TBL_PINS_RX2[] = {
 };
 
 static u16 wPrevTime[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
-static s16 sRC[sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2)];
-
-s16 RCRcvrPWM::getRC(u8 ch)
-{
-    if (ch >= getChCnt())
-        return CHAN_MIN_VALUE;
-
-    return sRC[ch];
-}
-
-s16 *RCRcvrPWM::getRCs(void)
-{
-    return (s16*)sRC;
-}
-
-u8 RCRcvrPWM::getChCnt(void)
-{
-    return sizeof(TBL_PINS_RX1) + sizeof(TBL_PINS_RX2);
-}
 
 void RCRcvrPWM::init(void)
 {
@@ -133,7 +114,7 @@ static void calcPeriod(u8 idx, u16 ts, u8 mask, u8 pins)
         if (mask & bv) {
             if (!(pins & bv)) {
                 wDiff  = constrain(ts - wPrevTime[start + i], PPM_MIN_VALUE, PPM_MAX_VALUE);
-                sRC[start + i] = map(wDiff, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
+                RCRcvr::sRC[start + i] = map(wDiff, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
             } else {
                 wPrevTime[start + i] = ts;
             }

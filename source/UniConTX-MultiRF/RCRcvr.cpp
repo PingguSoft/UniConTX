@@ -13,24 +13,13 @@
  see <http://www.gnu.org/licenses/>
 */
 
-#ifndef _RCVR_PWM_H_
-#define _RCVR_PWM_H_
 #include <Arduino.h>
 #include <avr/pgmspace.h>
-#include "Common.h"
+#include <avr/wdt.h>
+#include <SPI.h>
+
+#include "common.h"
+#include "utils.h"
 #include "RCRcvr.h"
 
-class RCRcvrPWM : public RCRcvr
-{
-
-public:
-
-    virtual void init(void);
-    virtual void close(void);
-    virtual u8   getChCnt(void);
-
-private:
-
-};
-
-#endif
+s16 RCRcvr::sRC[CH_CNT];

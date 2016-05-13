@@ -20,21 +20,46 @@
 #include "Common.h"
 #include "RFProtocol.h"
 
+#define CH_CNT      8
+
 class RCRcvr
 {
 
 public:
-    RCRcvr() { };
+    RCRcvr()    {  }
+    ~RCRcvr()   { end();   }
 
-    virtual void init(void);
-    virtual void close(void);
-    virtual s16  getRC(u8 ch);
-    virtual s16 *getRCs(void);
-    virtual void setRC(u8 ch, s16 val);
-    virtual u8   getChCnt(void);
+    s16 getRC(u8 ch)
+    {
+        if (ch < getChCnt())
+            return sRC[ch];
+        return CHAN_MIN_VALUE;
+    }
 
-private:
+    s16 *getRCs(void)
+    {
+        return (s16*)sRC;
+    }
 
+    void setRC(u8 ch, s16 val)
+    {
+        if (ch < getChCnt())
+            sRC[ch] = val;
+    }
+
+    void end(void)
+    {
+        close();
+    }
+
+    virtual void init(void) = 0;
+    virtual void close(void) = 0;
+    virtual u8   getChCnt(void) = 0;
+    virtual u32  loop(void) { }
+
+    // TREA1234
+    // static for ISR routine
+    static s16 sRC[CH_CNT];
 };
 
 #endif

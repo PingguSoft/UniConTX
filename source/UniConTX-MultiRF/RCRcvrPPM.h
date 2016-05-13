@@ -19,21 +19,13 @@
 #include <avr/pgmspace.h>
 #include "Common.h"
 #include "RCRcvr.h"
-#include "SerialProtocol.h"
 
 class RCRcvrPPM : public RCRcvr
 {
 
 public:
-    RCRcvrPPM():RCRcvr() { }
-    ~RCRcvrPPM()  { close(); }
-
-
     virtual void init(void);
     virtual void close(void);
-    virtual s16  getRC(u8 ch);
-    virtual void setRC(u8 ch, s16 val);
-    virtual s16 *getRCs(void);
     virtual u8   getChCnt(void);
 
 private:

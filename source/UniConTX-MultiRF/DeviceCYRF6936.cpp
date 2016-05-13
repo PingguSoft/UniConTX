@@ -31,7 +31,7 @@ DeviceCYRF6936::DeviceCYRF6936()
 void DeviceCYRF6936::initialize()
 {
     setRFSwitch(TX_CYRF6936);
-    
+
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     //SPI.setClockDivider(SPI_CLOCK_DIV2);
@@ -145,6 +145,7 @@ int DeviceCYRF6936::reset()
     setRFMode(RF_IDLE);
 
     //Verify the CYRD chip is responding
+    LOG(F("ID:%x\n"), readReg(CYRF_10_FRAMING_CFG));
     return (readReg(CYRF_10_FRAMING_CFG) == 0xa5);
 }
 

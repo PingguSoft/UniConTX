@@ -26,31 +26,7 @@
 #define MULTIPLIER (F_CPU / 8000000)
 #define CH_CNT      8
 
-// TREA1234
-static s16 sRC[CH_CNT];
-
 static void calcPPM();
-
-s16 RCRcvrPPM::getRC(u8 ch)
-{
-    if (ch >= getChCnt())
-        return CHAN_MIN_VALUE;
-
-    return sRC[ch];
-}
-
-void RCRcvrPPM::setRC(u8 ch, s16 val)
-{
-    if (ch >= getChCnt())
-        return;
-
-    sRC[ch] = val;
-}
-
-s16 *RCRcvrPPM::getRCs(void)
-{
-    return (s16*)sRC;
-}
 
 u8 RCRcvrPPM::getChCnt(void)
 {
@@ -86,7 +62,7 @@ static void calcPPM()
     } else {
         if (ch < CH_CNT - 1) {
             u16 val = constrain(diff, PPM_MIN_VALUE, PPM_MAX_VALUE);
-            sRC[ch++] = map(val, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
+            RCRcvr::sRC[ch++] = map(val, PPM_MIN_VALUE, PPM_MAX_VALUE, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
         }
     }
     lastTS = ts;

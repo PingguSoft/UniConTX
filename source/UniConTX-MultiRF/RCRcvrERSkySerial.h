@@ -13,24 +13,34 @@
  see <http://www.gnu.org/licenses/>
 */
 
-#ifndef _RCVR_PWM_H_
-#define _RCVR_PWM_H_
+#ifndef _RCVR_SERIAL_H_
+#define _RCVR_SERIAL_H_
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include "Common.h"
 #include "RCRcvr.h"
+#include "SerialProtocol.h"
 
-class RCRcvrPWM : public RCRcvr
+class RCRcvrERSkySerial : public RCRcvr
 {
-
 public:
-
     virtual void init(void);
     virtual void close(void);
     virtual u8   getChCnt(void);
+    virtual u32  loop(void);
 
 private:
+    u32 handlePacket(u8 *data, u8 size);
 
+    // variables
+    u8   mRxPacket[MAX_PACKET_SIZE];
+
+    u8   mState;
+    u8   mOffset;
+    u8   mDataSize;
+
+    u8   mProto;
+    u8   mSubProto;
 };
 
 #endif

@@ -15,11 +15,12 @@
 #include <SPI.h>
 #include "Common.h"
 #include "DeviceCommon.h"
+#include "Utils.h"
 
 DeviceCommon::DeviceCommon()
 {
-    init();
     SPI.begin();
+    init();
 }
 
 DeviceCommon::~DeviceCommon()
@@ -32,27 +33,27 @@ void DeviceCommon::init(void)
 {
     pinMode(PIN_TXEN, OUTPUT);
     pinMode(PIN_RXEN, OUTPUT);
-    setRFMode(RF_IDLE);
-    
-    pinMode(PIN_RF_PE1, OUTPUT);    
+    setRFMode(RF_IDLE, TRUE);
+
+    pinMode(PIN_RF_PE1, OUTPUT);
     pinMode(PIN_RF_PE2, OUTPUT);
 
     pinMode(PIN_CC_CSN, OUTPUT);
     digitalWrite(PIN_CC_CSN, HIGH);
-    
+
     pinMode(PIN_CSN_7105,  OUTPUT);
     digitalWrite(PIN_CSN_7105, HIGH);
-    
+
     pinMode(PIN_NRF_CSN, OUTPUT);
     digitalWrite(PIN_NRF_CSN, HIGH);
-    
-    pinMode(PIN_CYRF_CSN, OUTPUT);  
+
+    pinMode(PIN_CYRF_CSN, OUTPUT);
     pinMode(PIN_CYRF_RESET, OUTPUT);
     digitalWrite(PIN_CYRF_CSN, HIGH);
     digitalWrite(PIN_CYRF_RESET, HIGH);
 }
 
-void DeviceCommon::setRFMode(enum RF_MODE mode)
+void DeviceCommon::setRFMode(enum RF_MODE mode, u8 skipImpl)
 {
     switch(mode) {
         case RF_IDLE:
@@ -70,7 +71,8 @@ void DeviceCommon::setRFMode(enum RF_MODE mode)
             digitalWrite(PIN_RXEN, HIGH);
             break;
     }
-    setRFModeImpl(mode);
+    if (!skipImpl)
+        setRFModeImpl(mode);
 }
 
 void DeviceCommon::setRFSwitch(enum TX_CHIP chip)
@@ -92,7 +94,7 @@ void DeviceCommon::setRFSwitch(enum TX_CHIP chip)
             break;
 
         case TX_CYRF6936:
-            digitalWrite(PIN_RF_PE1, HIGH); 
+            digitalWrite(PIN_RF_PE1, HIGH);
             digitalWrite(PIN_RF_PE2, HIGH);
             break;
     }

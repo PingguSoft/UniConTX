@@ -67,11 +67,11 @@ enum TX_CHIP {
 class DeviceCommon
 {
 public:
-   
+
     DeviceCommon();
     ~DeviceCommon();
 
-    void setRFMode(enum RF_MODE mode);
+    void setRFMode(enum RF_MODE mode, u8 skipImpl=FALSE);
     void setRFSwitch(enum TX_CHIP chip);
 
     virtual void setRFModeImpl(enum RF_MODE mode) = 0;

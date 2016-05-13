@@ -38,7 +38,7 @@ static u8 mBaudAckLen;
 static u8 mBaudChkCtr;
 static u8 mBaudAckStr[12];
 static RFProtocol *mRFProto = NULL;
-static RCRcvrPPM  mRcvr;
+static RCRcvr     *mRcvr = NULL;
 static SerialProtocol mSerial;
 
 struct Config {
@@ -87,7 +87,7 @@ static u8 initProtocol(u32 id)
                 case RFProtocol::PROTO_NRF24L01_CFLIE:
                     mRFProto = new RFProtocolCFlie(id);
                     break;
-*/                    
+*/
                 default:
                     ret = 0;
                     break;
@@ -126,13 +126,13 @@ void setup()
 #if __STD_SERIAL__
     Serial.begin(57600);
 #else
-    mSerial.begin(57600);
+    mSerial.begin(100000, SERIAL_8E2);
 #endif
+
+    LOG(F("Start!!\n"));
 
     struct Config conf;
     EEPROM.get(0, conf);
-
-    mRcvr.init();
 
     conf.dwSignature = 0xCAFEBABE;
     conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
@@ -148,21 +148,31 @@ void setup()
             mRFProto->init();
         }
     }
+
+    mRcvr->init();
 }
 
 void loop()
 {
-    if (mRFProto) {
+    if (mRcvr) {
+        u32 proto = mRcvr->loop();
+
+        if (proto) {
+        }
+
 #if 0
         static u32 lastTS;
         u32 ts = millis();
-        if (ts - lastTS > 500) {
-            LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr.getRC(0), mRcvr.getRC(1), mRcvr.getRC(2), mRcvr.getRC(3), mRcvr.getRC(4),
-                mRcvr.getRC(5), mRcvr.getRC(6), mRcvr.getRC(7), mRcvr.getRC(8));
+        if (ts - lastTS > 200) {
+            LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
+                mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
             lastTS = ts;
         }
 #endif
-        mRFProto->injectControls(mRcvr.getRCs(), mRcvr.getChCnt());
+    }
+
+    if (mRFProto) {
+        mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getChCnt());
         mRFProto->loop();
     }
 }
