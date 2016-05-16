@@ -37,7 +37,7 @@ u32  rand32();
         #define DUMP    SerialProtocol::dumpHex
     #endif
 
-    #define __PRINT_FUNC__  LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+    #define __PRINT_FUNC__  //LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 #else
     #define LOG(...)
     #define DUMP(...)

@@ -20,6 +20,7 @@
 
 #include "common.h"
 #include "utils.h"
+#include "RFProtocol.h"
 #include "RCRcvrERSkySerial.h"
 
 typedef enum
@@ -27,6 +28,145 @@ typedef enum
     STATE_IDLE,
     STATE_BODY,
 } STATE_T;
+
+enum PROTOCOLS
+{
+	MODE_SERIAL = 0,		// Serial commands
+	MODE_FLYSKY = 1,		// =>A7105
+	MODE_HUBSAN = 2,		// =>A7105
+	MODE_FRSKY = 3,			// =>CC2500
+	MODE_HISKY = 4,			// =>NRF24L01
+	MODE_V2X2 = 5,			// =>NRF24L01
+	MODE_DSM2 = 6,			// =>CYRF6936
+	MODE_DEVO =7,			// =>CYRF6936
+	MODE_YD717 = 8,			// =>NRF24L01
+	MODE_KN  = 9,			// =>NRF24L01
+	MODE_SYMAX = 10,		// =>NRF24L01
+	MODE_SLT = 11,			// =>NRF24L01
+	MODE_CX10 = 12,			// =>NRF24L01
+	MODE_CG023 = 13,		// =>NRF24L01
+	MODE_BAYANG = 14,		// =>NRF24L01
+	MODE_FRSKYX = 15,		// =>CC2500
+	MODE_ESKY = 16,			// =>NRF24L01
+	MODE_MT99XX=17,			// =>NRF24L01
+	MODE_MJXQ=18,			// =>NRF24L01
+	MODE_SHENQI=19,			// =>NRF24L01
+	MODE_FY326=20,			// =>NRF24L01
+	MODE_SFHSS=21			// =>CC2500
+};
+
+enum Flysky
+{
+	Flysky=0,
+	V9X9=1,
+	V6X6=2,
+	V912=3
+};
+enum Hisky
+{
+	Hisky=0,
+	HK310=1
+};
+enum DSM2{
+	DSM2=0,
+	DSMX=1
+};
+enum YD717
+{
+	YD717=0,
+	SKYWLKR=1,
+	SYMAX4=2,
+	XINXUN=3,
+	NIHUI=4
+};
+enum KN
+{
+	WLTOYS=0,
+	FEILUN=1
+};
+enum SYMAX
+{
+	SYMAX=0,
+	SYMAX5C=1
+};
+enum CX10
+{
+    CX10_GREEN = 0,
+    CX10_BLUE=1,		// also compatible with CX10-A, CX12
+    DM007=2,
+	Q282=3,
+	JC3015_1=4,
+	JC3015_2=5,
+	MK33041=6,
+	Q242=7
+};
+enum CG023
+{
+    CG023 = 0,
+    YD829 = 1,
+    H8_3D = 2
+};
+enum MT99XX
+{
+	MT99	= 0,
+	H7		= 1,
+	YZ		= 2
+};
+enum MJXQ
+{
+	WLH08	= 0,
+	X600	= 1,
+	X800	= 2,
+	H26D	= 3
+};
+
+enum FRSKYX
+{
+	CH_16	= 0,
+	CH_8	= 1,
+};
+
+struct tbl {
+    u8  ersky;
+    u8  chip;
+    u8  proto;
+};
+
+static const PROGMEM struct tbl TBL_CNV[] = {
+    { MODE_SERIAL, 0,           255 },
+    { MODE_FLYSKY, TX_A7105,    RFProtocol::PROTO_A7105_FLYSKY },
+    { MODE_HUBSAN, TX_A7105,    RFProtocol::PROTO_A7105_HUBSAN },
+    { MODE_FRSKY,  TX_CC2500,   255   },
+    { MODE_HISKY,  TX_NRF24L01, RFProtocol::PROTO_NRF24L01_HISKY },
+    { MODE_V2X2,   TX_NRF24L01, RFProtocol::PROTO_NRF24L01_V2x2  },
+    { MODE_DSM2,   TX_CYRF6936, 255  },
+    { MODE_DEVO,   TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO  },
+    { MODE_YD717,  TX_NRF24L01, RFProtocol::PROTO_NRF24L01_YD717 },
+    { MODE_KN,     TX_NRF24L01, 255 },
+    { MODE_SYMAX,  TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX },
+    { MODE_SLT,    TX_NRF24L01, 255 },
+    { MODE_CX10,   TX_NRF24L01, 255 },
+    { MODE_CG023,  TX_NRF24L01, 255 },
+    { MODE_BAYANG, TX_NRF24L01, 255 },
+    { MODE_FRSKYX, TX_CC2500,   255 },
+    { MODE_MT99XX, TX_NRF24L01, 255 },
+    { MODE_MJXQ,   TX_NRF24L01, 255 },
+    { MODE_SHENQI, TX_NRF24L01, 255 },
+    { MODE_FY326,  TX_NRF24L01, 255 },
+    { MODE_SFHSS,  TX_CC2500,   255 },
+};
+
+template <typename T> void PROGMEM_read(const T * sce, T& dest)
+{
+    memcpy_P(&dest, sce, sizeof (T));
+}
+
+template <typename T> T PROGMEM_get(const T * sce)
+{
+    static T temp;
+    memcpy_P(&temp, sce, sizeof (T));
+    return temp;
+}
 
 u8 RCRcvrERSkySerial::getChCnt(void)
 {
@@ -36,6 +176,8 @@ u8 RCRcvrERSkySerial::getChCnt(void)
 void RCRcvrERSkySerial::init(void)
 {
     mState = STATE_IDLE;
+    mProto    = 255;
+    mSubProto = 255;
 }
 
 void RCRcvrERSkySerial::close(void)
@@ -122,15 +264,15 @@ u32 RCRcvrERSkySerial::handlePacket(u8 *data, u8 size)
         sRC[i] =  map(val, 204, 1844, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
     }
 
-    if (proto != mProto) {
-        mProto = proto;
-        ret |= (u32)proto << 16;
-    }
-
-    if (sub != mSubProto) {
+    if (proto != mProto || sub != mSubProto) {
+        LOG(F("PROTO ERSKY = %x %x\n"), proto, sub);
+        mProto    = proto;
         mSubProto = sub;
-        ret |= (u32)proto << 8;
-        ret |= option;
+
+        struct tbl t;
+        PROGMEM_read(&TBL_CNV[proto], t);
+        if (t.proto != 255)
+            ret = RFProtocol::buildID(t.chip, t.proto, sub);
     }
 
     return ret;

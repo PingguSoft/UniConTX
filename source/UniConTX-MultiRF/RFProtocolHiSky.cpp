@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -26,6 +26,10 @@ enum {
     HISKY_DATA = 0x10
 };
 
+enum {
+    PROTOOPTS_FORMAT_DEFAULT = 0,
+    PROTOOPTS_FORMAT_HK310, // 3 channel RXs, HKR3000/3100, XY3000/3100 ...
+};
 
 void RFProtocolHiSky::buildRFChannels(u32 seed)
 {
@@ -89,7 +93,7 @@ void RFProtocolHiSky::buildBindingPacket(void)
         mBindingBufs[i][1] = sum_h;
         mBindingBufs[i][2] = i-1;
     }
-    
+
     for(i = 0; i < 7; i++)
         mBindingBufs[1][i+3] = mRFChanBufs[i];
     for(i = 0; i < 7; i++)
@@ -111,7 +115,7 @@ u16 RFProtocolHiSky::getChannel(u8 id)
         ret = 0;
     else if (ret > 1000)
         ret = 1000;
-    
+
     return ret;
 }
 
@@ -123,23 +127,23 @@ void RFProtocolHiSky::buildDataPacket(void)
 
     mPacketBuf[8] = 0;
     mPacketBuf[9] = 0;
-    
+
     ch = getChannel(CH_AILERON);
     mPacketBuf[0]  = (u8)ch;
     mPacketBuf[8] |= (u8)((ch >> 8) & 0x0003);
-    
+
     ch = getChannel(CH_ELEVATOR);
     mPacketBuf[1]  = (u8)ch;
     mPacketBuf[8] |= (u8)((ch >> 6) & 0x000c);
-    
+
     ch = getChannel(CH_THROTTLE);
     mPacketBuf[2]  = (u8)ch;
     mPacketBuf[8] |= (u8)((ch >> 4) & 0x0030);
-    
+
     ch = getChannel(CH_RUDDER);
     mPacketBuf[3] = (u8)ch;
     mPacketBuf[8] |= (u8)((ch >> 2) & 0x00c0);
-    
+
     for (i = CH_AUX4; i >= CH_AUX1; i--) {
         ch = getChannel(i);
         mPacketBuf[i]  = (u8)ch;
@@ -164,9 +168,9 @@ void RFProtocolHiSky::initRxTxAddr(void)
 
     // Use LFSR to seed frequency hopping sequence after another
     // divergence round
-    for (u8 i = 0; i < sizeof(lfsr); ++i) 
+    for (u8 i = 0; i < sizeof(lfsr); ++i)
         rand32_r(&lfsr, 0);
-    buildRFChannels(lfsr);    
+    buildRFChannels(lfsr);
 
 }
 
@@ -202,14 +206,14 @@ u16 RFProtocolHiSky::callState(void)
     case 1:
         mDev.flushTx();
         break;
-        
+
     case 2:
         if (mBindCtr > 0) {
             mDev.writeRegMulti_P(NRF24L01_10_TX_ADDR, BINDING_ADDR, 5);
             mDev.writeReg(NRF24L01_05_RF_CH, 81);
         }
         break;
-        
+
     case 3:
         if (mBindCtr > 0) {
             mBindCtr--;
@@ -223,15 +227,15 @@ u16 RFProtocolHiSky::callState(void)
         }
         break;
 
-    case 4:        
+    case 4:
         if (mBindCtr > 0)
             mDev.flushTx();
         break;
-        
+
     case 5:
         mDev.setRFPower(getRFPower());
         break;
-        
+
     case 6:
         mDev.writeRegMulti(NRF24L01_10_TX_ADDR, mRxTxAddrBuf, 5);
         mDev.writeReg(NRF24L01_05_RF_CH, mRFChanBufs[mCurRFChan]);
@@ -246,7 +250,7 @@ u16 RFProtocolHiSky::callState(void)
 
     case 8: // none
         break;
-        
+
     default:
         mCtr1ms = 0;
         mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
@@ -291,7 +295,7 @@ int RFProtocolHiSky::reset(void)
 int RFProtocolHiSky::getInfo(s8 id, u8 *data)
 {
     u8 size;
-    
+
     size = RFProtocol::getInfo(id, data);
     if (size == 0) {
         switch (id) {

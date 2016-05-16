@@ -55,7 +55,7 @@ public:
     virtual void init(void) = 0;
     virtual void close(void) = 0;
     virtual u8   getChCnt(void) = 0;
-    virtual u32  loop(void) { }
+    virtual u32  loop(void) { return 0; }
 
     // TREA1234
     // static for ISR routine

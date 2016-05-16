@@ -49,16 +49,9 @@ struct Config {
     u8  ucPower;
 };
 
-static void initReceiver(u32 id)
-{
-
-}
-
 static u8 initProtocol(u32 id)
 {
     u8  ret = 0;
-
-    initReceiver(id);
 
     // protocol
     if (mRFProto) {
@@ -132,6 +125,10 @@ void setup()
 
     LOG(F("Start!!\n"));
 
+    mRcvr = new RCRcvrERSkySerial();
+    mRcvr->init();
+
+#if 0
     struct Config conf;
     EEPROM.get(0, conf);
 
@@ -149,9 +146,7 @@ void setup()
             mRFProto->init();
         }
     }
-
-    mRcvr = new RCRcvrERSkySerial();
-    mRcvr->init();
+#endif
 }
 
 void loop()
@@ -160,8 +155,14 @@ void loop()
         u32 proto = mRcvr->loop();
 
         if (proto) {
+            LOG(F("PROTO TJ :%x\n"), proto);
+            initProtocol(proto);
+            if (mRFProto) {
+                mRFProto->setControllerID(0x12345678);
+                mRFProto->setRFPower(TXPOWER_100mW);
+                mRFProto->init();
+            }
         }
-
 #if 0
         static u32 lastTS;
         u32 ts = millis();

@@ -18,8 +18,6 @@
 #include "Common.h"
 #include <stdarg.h>
 
-#define MAX_PACKET_SIZE 32
-
 class SerialProtocol
 {
 

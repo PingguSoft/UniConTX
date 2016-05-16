@@ -37,6 +37,9 @@ public:
         PROTO_NRF24L01_YD717,
         PROTO_NRF24L01_SYMAX,
         PROTO_NRF24L01_CFLIE,
+        PROTO_NRF24L01_BAYANG,
+        PROTO_NRF24L01_CX10,
+        PROTO_NRF24L01_KN,
     };
 
     enum {
@@ -46,6 +49,14 @@ public:
 
     enum {
         PROTO_CYRF6936_DEVO,
+        PROTO_CYRF6936_DSMX,
+        PROTO_CYRF6936_J6PRO,
+        PROTO_CYRF6936_WK2401,
+    };
+
+    enum {
+        PROTO_CC2500_SKYARTEC,
+        PROTO_CC2500_SFHSS,
     };
 
     enum {

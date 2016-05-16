@@ -35,22 +35,8 @@ struct ringBuf mTxRingBuf = { {0}, 0, 0 };
 static void putChar(struct ringBuf *buf, u8 data)
 {
     u8 head;
-    u8 tail;
-    u8 free;
 
-    do {
-        head = buf->head;
-        tail = buf->tail;
-
-        if (head >= tail)
-            free = MAX_BUF_SIZE - 1 - head + tail;
-        else
-            free = tail - head - 1;
-
-        if (free == 0)
-            delayMicroseconds(10);
-    } while (free == 0);
-
+    head = buf->head;
     buf->buffer[head] = data;
     if (++head >= MAX_BUF_SIZE)
         head = 0;
@@ -71,6 +57,23 @@ static u8 getChar(struct ringBuf *buf)
 
 static __inline void putChar2TX(u8 data)
 {
+    u8 head;
+    u8 tail;
+    u8 free;
+
+    do {
+        head = mTxRingBuf.head;
+        tail = mTxRingBuf.tail;
+
+        if (head >= tail)
+            free = MAX_BUF_SIZE - 1 - head + tail;
+        else
+            free = tail - head - 1;
+
+        if (free == 0)
+            delayMicroseconds(10);
+    } while (free == 0);
+
     putChar(&mTxRingBuf, data);
 }
 
@@ -211,7 +214,7 @@ void SerialProtocol::printf(const __FlashStringHelper *fmt, ...)
     va_end(args);
 
     for (u8 i = 0; i < strlen(buf); i++)
-        putChar(&mTxRingBuf, buf[i]);
+        putChar2TX(buf[i]);
     flushTX();
 }
 
@@ -225,7 +228,7 @@ void SerialProtocol::printf(char *fmt, ...)
     va_end(args);
 
     for (u8 i = 0; i < strlen(buf); i++)
-        putChar(&mTxRingBuf, buf[i]);
+        putChar2TX(buf[i]);
     flushTX();
 }
 

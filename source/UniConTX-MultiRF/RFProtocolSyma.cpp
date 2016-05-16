@@ -31,8 +31,6 @@
 
 #define PROTO_OPT_X5C_X2    0x01
 
-#define __PRINT_FUNC__      LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
-
 enum {
     SYMAX_INIT1 = 0,
     SYMAX_BIND2,

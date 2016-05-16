@@ -21,6 +21,8 @@
 #include "RCRcvr.h"
 #include "SerialProtocol.h"
 
+#define MAX_PACKET_SIZE 25
+
 class RCRcvrERSkySerial : public RCRcvr
 {
 public:
