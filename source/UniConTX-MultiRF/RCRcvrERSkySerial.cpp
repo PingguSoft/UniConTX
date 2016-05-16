@@ -156,18 +156,6 @@ static const PROGMEM struct tbl TBL_CNV[] = {
     { MODE_SFHSS,  TX_CC2500,   255 },
 };
 
-template <typename T> void PROGMEM_read(const T * sce, T& dest)
-{
-    memcpy_P(&dest, sce, sizeof (T));
-}
-
-template <typename T> T PROGMEM_get(const T * sce)
-{
-    static T temp;
-    memcpy_P(&temp, sce, sizeof (T));
-    return temp;
-}
-
 u8 RCRcvrERSkySerial::getChCnt(void)
 {
     return CH_CNT;

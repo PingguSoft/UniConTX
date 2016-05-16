@@ -124,8 +124,8 @@ void DeviceCYRF6936::setRFModeImpl(enum RF_MODE mode)
         mod  = 0x24;        // force IDLE
         gpio = 0x00;
     }
-    writeReg(CYRF_0F_XACT_CFG,  mod);
     writeReg(CYRF_0E_GPIO_CTRL, gpio);
+    writeReg(CYRF_0F_XACT_CFG,  mod);
 }
 
 int DeviceCYRF6936::reset()

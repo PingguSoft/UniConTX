@@ -27,6 +27,19 @@ u32  rand32_r(u32 *seed, u8 update);
 u32  rand32();
 
 
+template <typename T> void PROGMEM_read(const T * sce, T& dest)
+{
+    memcpy_P(&dest, sce, sizeof (T));
+}
+
+template <typename T> T PROGMEM_get(const T * sce)
+{
+    static T temp;
+    memcpy_P(&temp, sce, sizeof (T));
+    return temp;
+}
+
+
 #if __DEBUG__
     #if __STD_SERIAL__
         void LOG(char *fmt, ... );

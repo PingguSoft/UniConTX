@@ -55,7 +55,7 @@ static u8 getChar(struct ringBuf *buf)
     return ch;
 }
 
-static __inline void putChar2TX(u8 data)
+static void putChar2TX(u8 data)
 {
     u8 head;
     u8 tail;

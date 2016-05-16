@@ -288,8 +288,7 @@ void RFProtocolSyma::init1(void)
         }
     }
     mDev.writeRegMulti_P(NRF24L01_10_TX_ADDR,
-                                (getProtocolOpt() == PROTO_OPT_X5C_X2) ? RX_TX_ADDR_X5C : BIND_RX_TX_ADDR,
-                                5);
+                         (getProtocolOpt() == PROTO_OPT_X5C_X2) ? RX_TX_ADDR_X5C : BIND_RX_TX_ADDR, 5);
     mDev.readReg(NRF24L01_07_STATUS);
 
     mDev.flushTx();
@@ -316,12 +315,12 @@ void RFProtocolSyma::init2(void)
     mDev.writePayload_P(FIRST_PACKET, sizeof(FIRST_PACKET));
 
     if (getProtocolOpt() == PROTO_OPT_X5C_X2) {
-      mRFChanCnt = sizeof(CHANS_BIND_X5C);
-      memcpy_P(mRFChanBufs, CHANS_BIND_X5C, mRFChanCnt);
+        mRFChanCnt = sizeof(CHANS_BIND_X5C);
+        memcpy_P(mRFChanBufs, CHANS_BIND_X5C, mRFChanCnt);
     } else {
-      initRxTxAddr();   // make info available for bind packets
-      mRFChanCnt = sizeof(CHANS_BIND);
-      memcpy_P(mRFChanBufs, CHANS_BIND, mRFChanCnt);
+        initRxTxAddr();   // make info available for bind packets
+        mRFChanCnt = sizeof(CHANS_BIND);
+        memcpy_P(mRFChanBufs, CHANS_BIND, mRFChanCnt);
     }
 
     mCurRFChan   = 0;
@@ -334,11 +333,11 @@ void RFProtocolSyma::init3(void)
 {
     __PRINT_FUNC__;
     if (getProtocolOpt() == PROTO_OPT_X5C_X2) {
-      mRFChanCnt = sizeof(CHANS_DATA_X5C);
-      memcpy_P(mRFChanBufs, CHANS_DATA_X5C, mRFChanCnt);
+        mRFChanCnt = sizeof(CHANS_DATA_X5C);
+        memcpy_P(mRFChanBufs, CHANS_DATA_X5C, mRFChanCnt);
     } else {
-      setRFChannel(mRxTxAddrBuf[0]);
-      mDev.writeRegMulti(NRF24L01_10_TX_ADDR, mRxTxAddrBuf, 5);
+        setRFChannel(mRxTxAddrBuf[0]);
+        mDev.writeRegMulti(NRF24L01_10_TX_ADDR, mRxTxAddrBuf, 5);
     }
     mCurRFChan   = 0;
     mPacketCtr = 0;
