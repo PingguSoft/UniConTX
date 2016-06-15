@@ -19,8 +19,6 @@
 
 #define RANDOM_CHANNELS 0
 #define BIND_CHANNEL    0x0d        //This can be any odd channel
-#define MODEL           0
-
 #define NUM_WAIT_LOOPS  (100 / 5)   //each loop is ~5us.  Do not wait more than 100us
 
 #define __PRINT_FUNC__  LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
@@ -114,6 +112,7 @@ static const PROGMEM u8 TBL_PNCODES[5][9][8] = {
 
 static const PROGMEM u8 TBL_PN_BIND[] = { 0xc6,0x94,0x22,0xfe,0x48,0xe6,0x57,0x4e };
 
+// MAP order : 0123 - TAER
 static const PROGMEM u8 ch_map4[] = {0, 1, 2, 3, 0xff, 0xff, 0xff};     //Guess
 static const PROGMEM u8 ch_map5[] = {0, 1, 2, 3, 4,    0xff, 0xff};     //Guess
 static const PROGMEM u8 ch_map6[] = {1, 5, 2, 3, 0,    4,    0xff};     //HP6DSM
@@ -124,6 +123,7 @@ static const PROGMEM u8 ch_map10[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 0xf
 static const PROGMEM u8 ch_map11[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 10, 0xff, 0xff, 0xff};
 static const PROGMEM u8 ch_map12[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 10, 11, 0xff, 0xff};
 static const u8 *ch_map[] = {ch_map4, ch_map5, ch_map6, ch_map7, ch_map8, ch_map9, ch_map10, ch_map11, ch_map12};
+static const PROGMEM u8 ch_cvt[] = { RFProtocol::CH_THROTTLE, RFProtocol::CH_AILERON, RFProtocol::CH_ELEVATOR, RFProtocol::CH_RUDDER };
 
 void RFProtocolDSM::build_bind_packet(void)
 {
@@ -162,53 +162,53 @@ void RFProtocolDSM::build_bind_packet(void)
     DUMP("BIND", mPacketBuf, 16);
 }
 
+
 void RFProtocolDSM::build_data_packet(u8 upper)
 {
     u8 i;
+    u8 bits;
     const u8 *chmap = ch_map[mChanCnt - 4];
 
-#if 0
-    if (mIsBinding && PROTOCOL_SticksMoved(0)) {
+    if (mIsBinding && isStickMoved(0)) {
         //Don't turn off dialog until sticks are moved
         //PROTOCOL_SetBindState(0);  //Turn off Bind dialog
         mIsBinding = 0;
+        LOG(F("BINDING FINISH\n"));
     }
-#endif
-
-    u8 bits;
 
     if (getProtocolOpt() & PROTOOPTS_DSMX) {
         mPacketBuf[0] = mMfgIDBuf[2];
-        mPacketBuf[1] = mMfgIDBuf[3] + mModel;
+        mPacketBuf[1] = mMfgIDBuf[3];
         bits = 11;
     } else {
         mPacketBuf[0] = (0xff ^ mMfgIDBuf[2]);
-        mPacketBuf[1] = (0xff ^ mMfgIDBuf[3]) + mModel;
+        mPacketBuf[1] = (0xff ^ mMfgIDBuf[3]);
         bits = 10;
     }
 
     u16 max = 1 << bits;
-    u16 pct_100 = (u32)max * 100 / 150;
 
     for (i = 0; i < 7; i++) {
-       u8  idx = pgm_read_byte(chmap[upper * 7 + i]);
-       s32 value;
+       u8  idx = pgm_read_byte(chmap + (upper * 7 + i));
+       u8  ch;
+       s16 value;
 
        if (idx == 0xff) {
            value = 0xffff;
        } else {
             if (mIsBinding) {
-                value = max / 2;
+                value = max >> 1;
                 if (idx == 0)
                     value = 1;
             } else {
-                value = (s32)getControlByOrder(idx) * (pct_100 / 2) / CHAN_MAX_VALUE + (max / 2);
+                if (idx < 4)
+                    ch = pgm_read_byte(ch_cvt + idx);
+                else
+                    ch = idx;
+
+                value = map(getControl(ch) , CHAN_MIN_VALUE, CHAN_MAX_VALUE, 0, max - 1);
             }
-            if (value >= max)
-                value = max - 1;
-            else if (value < 0)
-                value = 0;
-            value = (upper && i == 0 ? 0x8000 : 0) | (idx << bits) | value;
+            value |= ((upper && i == 0) ? 0x8000 : 0) | (idx << bits);
        }
        mPacketBuf[i*2+2] = (value >> 8) & 0xff;
        mPacketBuf[i*2+3] = (value >> 0) & 0xff;
@@ -232,7 +232,7 @@ static const PROGMEM u8 TBL_INIT_VALS[][2] = {
     {CYRF_1B_TX_OFFSET_LSB, 0x55},
     {CYRF_1C_TX_OFFSET_MSB, 0x05},
     {CYRF_0F_XACT_CFG,      0x24},
-    {CYRF_03_TX_CFG,        0x38},
+    {CYRF_03_TX_CFG,        0x38 | 7},
     {CYRF_12_DATA64_THOLD,  0x0a},
     {CYRF_0F_XACT_CFG,      0x04},
     {CYRF_39_ANALOG_CTRL,   0x01},
@@ -241,12 +241,12 @@ static const PROGMEM u8 TBL_INIT_VALS[][2] = {
     {CYRF_12_DATA64_THOLD,  0x0a},      //set pn correlation threshold
     {CYRF_10_FRAMING_CFG,   0x4a},      //set sop len and threshold
     {CYRF_29_RX_ABORT,      0x0f},      //Clear RX abort?
-    {CYRF_03_TX_CFG,        0x38},      //Set 64chip, SDE mode, max-power
+    {CYRF_03_TX_CFG,        0x38 | 7},  //Set 64chip, SDR mode, max-power
     {CYRF_10_FRAMING_CFG,   0x4a},      //set sop len and threshold
     {CYRF_1F_TX_OVERRIDE,   0x04},      //disable tx CRC
-    {CYRF_1E_RX_OVERRIDE,   0x14},      //disable rx mCRC
+    {CYRF_1E_RX_OVERRIDE,   0x14},      //disable rx CRC
     {CYRF_14_EOP_CTRL,      0x02},      //set EOP sync == 2
-    {CYRF_01_TX_LENGTH,     0x10},      //16byte mPacketBuf
+    {CYRF_01_TX_LENGTH,     0x10},      //16byte packet
 };
 
 void RFProtocolDSM::cyrf_config(void)
@@ -256,15 +256,9 @@ void RFProtocolDSM::cyrf_config(void)
     u8 reg, val;
 
     for (u8 i = 0; i < sizeof(TBL_INIT_VALS) / 2; i++) {
-        reg = pgm_read_byte(TBL_INIT_VALS[i][0]);
-        val = pgm_read_byte(TBL_INIT_VALS[i][1]);
-
-        if (reg == CYRF_03_TX_CFG) {
-            val |= getRFPower();
-            mDev.writeReg(reg, val);
-        } else {
-            mDev.writeReg(reg, val);
-        }
+        reg = pgm_read_byte(&TBL_INIT_VALS[i][0]);
+        val = pgm_read_byte(&TBL_INIT_VALS[i][1]);
+        mDev.writeReg(reg, val);
     }
     mDev.writePreamble(0x333304);
     mDev.setRFChannel(0x61);
@@ -278,14 +272,17 @@ void RFProtocolDSM::initialize_bind_state(void)
     mDev.setRFChannel(BIND_CHANNEL); //This seems to be random?
     u8 pn_row = get_pn_row(BIND_CHANNEL);
 
-    LOG(F("Ch: %d Row: %d SOP: %d Data: %d\n"), BIND_CHANNEL, pn_row, mSOPCol, mDataCol);
+    //LOG(F("Ch: %d Row: %d SOP: %d Data: %d\n"), BIND_CHANNEL, pn_row, mSOPCol, mDataCol);
     mDev.setCRCSeed(mCRC);
     mDev.setSOPCode_P(TBL_PNCODES[pn_row][mSOPCol], 8);
+    memcpy_P(data_code, TBL_PNCODES[pn_row][mSOPCol], 8);
+    //DUMP("sop_code", data_code, 8);
+
     memcpy_P(data_code, TBL_PNCODES[pn_row][mDataCol], 16);
     memcpy_P(data_code + 16, TBL_PNCODES[0][8], 8);
     memcpy_P(data_code + 24, TBL_PN_BIND, 8);
     mDev.setDataCode(data_code, 32);
-    DUMP("data_code", data_code, 32);
+    //DUMP("data_code", data_code, 32);
     build_bind_packet();
 }
 
@@ -313,8 +310,8 @@ void RFProtocolDSM::cyrf_configdata(void)
     u8 reg, val;
 
     for (u8 i = 0; i < sizeof(TBL_DATA_VALS) / 2; i++) {
-        reg = pgm_read_byte(TBL_DATA_VALS[i][0]);
-        val = pgm_read_byte(TBL_DATA_VALS[i][1]);
+        reg = pgm_read_byte(&TBL_DATA_VALS[i][0]);
+        val = pgm_read_byte(&TBL_DATA_VALS[i][1]);
 
         if (reg == CYRF_03_TX_CFG) {
             val |= getRFPower();
@@ -335,6 +332,7 @@ void RFProtocolDSM::set_sop_data_crc(void)
 
     mDev.setSOPCode_P(TBL_PNCODES[pn_row][mSOPCol], 8);
     mDev.setDataCode_P(TBL_PNCODES[pn_row][mDataCol], 16);
+
     /* setup for next iteration */
     if (getProtocolOpt() & PROTOOPTS_DSMX)
         mChanIdx = (mChanIdx + 1) % 23;
@@ -579,7 +577,7 @@ u16 RFProtocolDSM::dsm2_cb(void)
         //Binding
         mState++;
         if(mState & 1) {
-            //Send mPacketBuf on even states
+            //Send packet on even states
             //Note mState has already incremented,
             // so this is actually 'even' mState
             mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
@@ -598,7 +596,6 @@ u16 RFProtocolDSM::dsm2_cb(void)
             return 1500;
         }
     } else if(mState < DSM2_CH1_WRITE_A) {
-        LOG(F("after binding\n"));
         //Select mRFChanBufs and configure for writing data
         //CYRF_FindBestChannels(ch, 2, 10, 1, 79);
         cyrf_configdata();
@@ -728,7 +725,6 @@ void RFProtocolDSM::initialize(u8 bind)
     mCRC     = ~((mMfgIDBuf[0] << 8) + mMfgIDBuf[1]);
     mSOPCol  = (mMfgIDBuf[0] + mMfgIDBuf[1] + mMfgIDBuf[2] + 2) & 0x07;
     mDataCol = 7 - mSOPCol;
-    mModel   = MODEL;
     mChanCnt = 7;
     if (mChanCnt < 6)
         mChanCnt = 6;
@@ -741,7 +737,6 @@ void RFProtocolDSM::initialize(u8 bind)
     mDev.setRFMode(RF_TX);
     if (bind) {
         mState = DSM2_BIND;
-        //PROTOCOL_SetBindState((BIND_COUNT > 200 ? BIND_COUNT / 2 : 200) * 10); //msecs
         initialize_bind_state();
         mIsBinding = 1;
     } else {
@@ -760,6 +755,8 @@ int RFProtocolDSM::init(void)
     mChanIdx  = 0;
     mPacketCtr   = 0;
     mFixedID     = 0;
+
+    isStickMoved(1);
 
     /* Initialise CYRF chip */
     mDev.initialize();

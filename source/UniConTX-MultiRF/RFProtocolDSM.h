@@ -68,7 +68,6 @@ private:
     u16  mCRC;
     u8   mChanCnt;
     u8   mIsBinding;
-    u8   mModel;
 
     u32  mFixedID;
 

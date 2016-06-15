@@ -113,6 +113,7 @@ public:
     void injectControls(s16 *data, int size);
     s16  getControl(u8 ch);         // TREA order
     s16  getControlByOrder(u8 ch);  // AETR order : deviation order
+    u8   isStickMoved(u8 init);
 
     // power
     u8   getRFPower(void);

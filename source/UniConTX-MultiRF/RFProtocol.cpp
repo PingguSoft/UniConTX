@@ -120,6 +120,25 @@ s16 RFProtocol::getControl(u8 ch)
     return mBufControls[ch];
 }
 
+u8 RFProtocol::isStickMoved(u8 init)
+{
+    const s32 STICK_MOVEMENT = 15;   // defines when the bind dialog should be interrupted (stick movement STICK_MOVEMENT %)
+    static s16 ele_start, ail_start;
+
+    s16 ele = mBufControls[CH_ELEVATOR];
+    s16 ail = mBufControls[CH_AILERON];
+
+    if(init) {
+        ele_start = ele;
+        ail_start = ail;
+        return 0;
+    }
+
+    s16 ele_diff = abs(ele_start - ele);
+    s16 ail_diff = abs(ail_start - ail);
+    return ((ele_diff + ail_diff > 2 * STICK_MOVEMENT * CHAN_MAX_VALUE / 100));
+}
+
 void RFProtocol::handleTimer(s8 id)
 {
     u16 nextTime;

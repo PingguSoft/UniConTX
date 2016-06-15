@@ -147,9 +147,10 @@ void setup()
 
     conf.dwSignature = 0xCAFEBABE;
     conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
-//    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
-    conf.ucPower     = TXPOWER_100mW;
+    conf.ucPower     = TXPOWER_150mW;
 
     if (conf.dwSignature == 0xCAFEBABE) {
         initProtocol(conf.dwProtoID);
@@ -162,8 +163,10 @@ void setup()
 #endif
 }
 
-u16 thr  = CHAN_MIN_VALUE;
-u16 step = 20;
+s16 thr  = CHAN_MIN_VALUE;
+s16 ele  = CHAN_MID_VALUE;
+s16 step_thr = 5;
+s16 step_ele = 5;
 u8  sim = 0;
 
 void loop()
@@ -200,15 +203,20 @@ void loop()
         if (sim) {
             static u32 lastTS;
             u32 ts = millis();
-            if (ts - lastTS > 100) {
-                if (thr <= CHAN_MIN_VALUE || thr >= CHAN_MAX_VALUE)
-                    step = -step;
+            if (ts - lastTS > 20) {
+                if (thr <  CHAN_MIN_VALUE || thr > CHAN_MAX_VALUE)
+                    step_thr = -step_thr;
 
-                thr += step;
+                if (ele <  CHAN_MIN_VALUE || ele > CHAN_MAX_VALUE)
+                    step_ele = -step_ele;
+
+                thr += step_thr;
+                ele += step_ele;
 
                 mRcvr->setRC(RFProtocol::CH_THROTTLE, thr);
-                LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
-                    mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
+                mRcvr->setRC(RFProtocol::CH_AILERON, ele);
+//                LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
+//                    mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
                 lastTS = ts;
             }
         }
