@@ -270,7 +270,7 @@ void RFProtocolDevo::setBoundSOPCodes(void)
         crc = 1;
     mDev.setRFMode(RF_TX);
     mDev.setCRCSeed((crc << 8) + crc);
-    mDev.setSOPCode_P(SOPCODES[sopidx]);
+    mDev.setSOPCode_P(SOPCODES[sopidx], 8);
     mDev.setRFPower(getRFPower());
 }
 
@@ -302,8 +302,8 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
 void RFProtocolDevo::init1(void)
 {
     /* Initialise CYRF chip */
-    mDev.initialize();
-    mDev.reset();
+//    mDev.initialize();
+//    mDev.reset();
 
     u8 reg, val;
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) / 2; i++) {
@@ -510,7 +510,7 @@ int RFProtocolDevo::init(void)
     mDev.readMfgID(mMfgIDBuf);
     mDev.setRFMode(RF_TX);
     mDev.setCRCSeed(0x0000);
-    mDev.setSOPCode_P(SOPCODES[0]);
+    mDev.setSOPCode_P(SOPCODES[0], 8);
     setRadioChannels();
 
     mBoolFixedID = 0;

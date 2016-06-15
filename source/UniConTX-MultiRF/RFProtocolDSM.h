@@ -40,19 +40,17 @@ public:
     virtual u16  callState(void);
 
 private:
-    void init1(void);
-    void scramblePacket(void);
-    void addPacketSuffix(void);
-    void buildBeaconPacket(int upper);
-    void buildBindPacket(void);
-    void buildDataPacket(void);
-    s32  convFloatStr2Int(u8 *ptr);
-    void parseTelemetryPacket(u8 *mPacketBuf);
-    void setBoundSOPCodes(void);
-    void setRadioChannels(void);
+    void build_bind_packet(void);
+    void build_data_packet(u8 upper);
+    u8   get_pn_row(u8 channel);
+    void cyrf_config(void);
+    void initialize_bind_state(void);
+    void cyrf_configdata(void);
+    void set_sop_data_crc(void);
+    void calc_dsmx_channel(void);
+    u16  dsm2_cb(void);
+    void initialize(u8 bind);
     void buildPacket(void);
-    u16  callStateTelemetry(void);
-    u16  callStateNormal(void);
 
 // variables
     DeviceCYRF6936  mDev;
@@ -63,19 +61,15 @@ private:
     u8   mMfgIDBuf[MFG_ID_SIZE];
 
     u8   mPacketCtr;
-    u8   mConChanIdx;
-    u8   mPacketSize;
-    u8   mState;
-    u8   mTxState;
+    u8   mChanIdx;
+    u16  mState;
     u8   mSOPCol;
     u8   mDataCol;
-    u8   mCRCIdx;
     u16  mCRC;
     u8   mChanCnt;
     u8   mIsBinding;
     u8   mModel;
 
-    u8   mBoolFixedID;
     u32  mFixedID;
 
 protected:

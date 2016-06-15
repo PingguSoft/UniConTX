@@ -81,7 +81,7 @@ class DeviceCYRF6936 : public DeviceCommon
 {
 public:
     DeviceCYRF6936();
-    
+
     void initialize();
     int  reset();
     u8   writeReg(u8 reg, u8 data);
@@ -93,9 +93,10 @@ public:
     void readMfgID(u8 *data);
     void setRFChannel(u8 ch);
     void setCRCSeed(u16 crc);
-    void setSOPCode(u8 *sopcodes);
-    void setSOPCode_P(const u8 *sopcodes);
+    void setSOPCode(u8 *sopcodes, u8 len);
+    void setSOPCode_P(const u8 *sopcodes, u8 len);
     void setDataCode(u8 *datacodes, u8 len);
+    void setDataCode_P(const u8 *datacodes, u8 len);
     void writePreamble(u32 preamble);
     void startReceive();
     u8   writePayload(u8 *data, u8 length);

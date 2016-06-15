@@ -176,18 +176,18 @@ void DeviceCYRF6936::setCRCSeed(u16 crc)
  * these are the recommended sop codes from Cypress
  * See "WirelessUSB LP/LPstar and PRoC LP/LPstar Technical Reference Manual"
  */
-void DeviceCYRF6936::setSOPCode(u8 *sopcodes)
+void DeviceCYRF6936::setSOPCode(u8 *sopcodes, u8 len)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < 8; i++) WriteRegister)0x23, sopcodes[i];
-    writeRegMulti(CYRF_22_SOP_CODE, sopcodes, 8);
+    writeRegMulti(CYRF_22_SOP_CODE, sopcodes, len);
 }
 
-void DeviceCYRF6936::setSOPCode_P(const u8 *sopcodes)
+void DeviceCYRF6936::setSOPCode_P(const u8 *sopcodes, u8 len)
 {
     //NOTE: This can also be implemented as:
     //for(i = 0; i < 8; i++) WriteRegister)0x23, sopcodes[i];
-    writeRegMulti_P(CYRF_22_SOP_CODE, sopcodes, 8);
+    writeRegMulti_P(CYRF_22_SOP_CODE, sopcodes, len);
 }
 
 void DeviceCYRF6936::setDataCode(u8 *datacodes, u8 len)
@@ -195,6 +195,13 @@ void DeviceCYRF6936::setDataCode(u8 *datacodes, u8 len)
     //NOTE: This can also be implemented as:
     //for(i = 0; i < len; i++) WriteRegister)0x23, datacodes[i];
     writeRegMulti(CYRF_23_DATA_CODE, datacodes, len);
+}
+
+void DeviceCYRF6936::setDataCode_P(const u8 *datacodes, u8 len)
+{
+    //NOTE: This can also be implemented as:
+    //for(i = 0; i < len; i++) WriteRegister)0x23, datacodes[i];
+    writeRegMulti_P(CYRF_23_DATA_CODE, datacodes, len);
 }
 
 void DeviceCYRF6936::writePreamble(u32 preamble)
@@ -278,7 +285,7 @@ void DeviceCYRF6936::findBestChannels(u8 *channels, u8 len, u8 minspace, u8 min,
         startReceive();
         delay(10);
         rssi[i] = readReg(CYRF_13_RSSI);
-        //LOG(F("CH:%d, RSSI:%d\n"), i, rssi[i]);
+        LOG(F("CH:%d, RSSI:%d\n"), i, rssi[i]);
     }
 
     for (i = 0; i < len; i++) {

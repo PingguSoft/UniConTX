@@ -27,6 +27,7 @@
 #include "RFProtocolHiSky.h"
 #include "RFProtocolCFlie.h"
 #include "RFProtocolDevo.h"
+#include "RFProtocolDSM.h"
 #include "RFProtocolHubsan.h"
 #include "RFProtocolFlysky.h"
 #include "RCRcvrPPM.h"
@@ -90,8 +91,20 @@ static u8 initProtocol(u32 id)
         break;
 
         case TX_CYRF6936:
-            mRFProto = new RFProtocolDevo(id);
             ret = 1;
+            switch (RFProtocol::getProtocol(id)) {
+                case RFProtocol::PROTO_CYRF6936_DEVO:
+                    mRFProto = new RFProtocolDevo(id);
+                    break;
+
+                case RFProtocol::PROTO_CYRF6936_DSMX:
+                    mRFProto = new RFProtocolDSM(id);
+                    break;
+
+                default:
+                    ret = 0;
+                    break;
+            }
             break;
 
         case TX_A7105: {
@@ -125,15 +138,15 @@ void setup()
 
     LOG(F("Start!!\n"));
 
-    mRcvr = new RCRcvrERSkySerial();
+    mRcvr = new RCRcvrPPM(); //new RCRcvrERSkySerial();
     mRcvr->init();
 
-#if 0
+#if 1
     struct Config conf;
     EEPROM.get(0, conf);
 
     conf.dwSignature = 0xCAFEBABE;
-    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
 //    conf.dwProtoID   = RFProtocol::buildID(RFProtocol::NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_100mW;
@@ -143,15 +156,20 @@ void setup()
         if (mRFProto) {
             mRFProto->setControllerID(conf.dwConID);
             mRFProto->setRFPower(conf.ucPower);
-            mRFProto->init();
+//            mRFProto->init();
         }
     }
 #endif
 }
 
+u16 thr  = CHAN_MIN_VALUE;
+u16 step = 20;
+u8  sim = 0;
+
 void loop()
 {
     if (mRcvr) {
+#if 0
         u32 proto = mRcvr->loop();
 
         if (proto) {
@@ -163,6 +181,39 @@ void loop()
                 mRFProto->init();
             }
         }
+#else
+        if (Serial.available()) {
+            u8 ch = Serial.read();
+
+            switch (ch) {
+                case 'b':
+                    sim = 0;
+                    mRFProto->init();
+                    break;
+
+                case 's':
+                    sim = 1;
+                    break;
+            }
+        }
+
+        if (sim) {
+            static u32 lastTS;
+            u32 ts = millis();
+            if (ts - lastTS > 100) {
+                if (thr <= CHAN_MIN_VALUE || thr >= CHAN_MAX_VALUE)
+                    step = -step;
+
+                thr += step;
+
+                mRcvr->setRC(RFProtocol::CH_THROTTLE, thr);
+                LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
+                    mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
+                lastTS = ts;
+            }
+        }
+#endif
+
 #if 0
         static u32 lastTS;
         u32 ts = millis();
