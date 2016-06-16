@@ -2147,7 +2147,7 @@ W = angled&lt;p&gt;
 <instance part="R15" gate="G$1" x="160.02" y="111.76"/>
 <instance part="R19" gate="G$1" x="160.02" y="137.16"/>
 <instance part="R20" gate="G$1" x="160.02" y="134.62"/>
-<instance part="R17" gate="G$1" x="160.02" y="119.38"/>
+<instance part="R17" gate="G$1" x="160.02" y="121.92"/>
 </instances>
 <busses>
 </busses>
@@ -2480,8 +2480,8 @@ W = angled&lt;p&gt;
 <label x="223.52" y="142.24" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="165.1" y1="119.38" x2="182.88" y2="119.38" width="0.1524" layer="91"/>
-<label x="167.64" y="119.38" size="1.778" layer="95"/>
+<wire x1="165.1" y1="121.92" x2="182.88" y2="121.92" width="0.1524" layer="91"/>
+<label x="167.64" y="121.92" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="D10" class="0">

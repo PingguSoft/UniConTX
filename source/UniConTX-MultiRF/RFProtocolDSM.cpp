@@ -21,7 +21,7 @@
 #define BIND_CHANNEL    0x0d        //This can be any odd channel
 #define NUM_WAIT_LOOPS  (100 / 5)   //each loop is ~5us.  Do not wait more than 100us
 
-#define __PRINT_FUNC__  LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+#define __PRINT_FUNC__  //LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
 
 enum {
     PROTOOPTS_DSMX = 1,
@@ -159,7 +159,7 @@ void RFProtocolDSM::build_bind_packet(void)
     mPacketBuf[14] = sum >> 8;
     mPacketBuf[15] = sum & 0xff;
 
-    DUMP("BIND", mPacketBuf, 16);
+//    DUMP("BIND", mPacketBuf, 16);
 }
 
 
@@ -173,7 +173,7 @@ void RFProtocolDSM::build_data_packet(u8 upper)
         //Don't turn off dialog until sticks are moved
         //PROTOCOL_SetBindState(0);  //Turn off Bind dialog
         mIsBinding = 0;
-        LOG(F("BINDING FINISH\n"));
+//        LOG(F("BINDING FINISH\n"));
     }
 
     if (getProtocolOpt() & PROTOOPTS_DSMX) {
@@ -570,7 +570,9 @@ NO_INLINE static void parse_telemetry_packet()
 u16 RFProtocolDSM::dsm2_cb(void)
 {
 #define CH1_CH2_DELAY 4010  // Time between write of channel 1 and channel 2
+//#define CH1_CH2_DELAY 3000  // Time between write of channel 1 and channel 2
 #define WRITE_DELAY   1550  // Time after write to verify write complete
+//#define WRITE_DELAY   1000  // Time after write to verify write complete
 #define READ_DELAY     400  // Time before write to check read state, and switch channel
 
     if(mState < DSM2_CHANSEL) {

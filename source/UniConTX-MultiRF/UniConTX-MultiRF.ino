@@ -70,7 +70,7 @@ static u8 initProtocol(u32 id)
                 case RFProtocol::PROTO_NRF24L01_YD717:
                     mRFProto = new RFProtocolYD717(id);
                     break;
-
+/*
                 case RFProtocol::PROTO_NRF24L01_V2x2:
                     mRFProto = new RFProtocolV2x2(id);
                     break;
@@ -78,7 +78,7 @@ static u8 initProtocol(u32 id)
                 case RFProtocol::PROTO_NRF24L01_HISKY:
                     mRFProto = new RFProtocolHiSky(id);
                     break;
-/*
+
                 case RFProtocol::PROTO_NRF24L01_CFLIE:
                     mRFProto = new RFProtocolCFlie(id);
                     break;
@@ -138,10 +138,11 @@ void setup()
 
     LOG(F("Start!!\n"));
 
-    mRcvr = new RCRcvrPPM(); //new RCRcvrERSkySerial();
+//    mRcvr = new RCRcvrPPM();
+    mRcvr = new RCRcvrERSkySerial();
     mRcvr->init();
 
-#if 1
+#if 0
     struct Config conf;
     EEPROM.get(0, conf);
 
@@ -165,14 +166,14 @@ void setup()
 
 s16 thr  = CHAN_MIN_VALUE;
 s16 ele  = CHAN_MID_VALUE;
-s16 step_thr = 5;
-s16 step_ele = 5;
+s16 step_thr = 2;
+s16 step_ele = 2;
 u8  sim = 0;
 
 void loop()
 {
     if (mRcvr) {
-#if 0
+#if 1
         u32 proto = mRcvr->loop();
 
         if (proto) {
@@ -215,6 +216,8 @@ void loop()
 
                 mRcvr->setRC(RFProtocol::CH_THROTTLE, thr);
                 mRcvr->setRC(RFProtocol::CH_AILERON, ele);
+                mRcvr->setRC(RFProtocol::CH_RUDDER, ele);
+                mRcvr->setRC(RFProtocol::CH_ELEVATOR, ele);
 //                LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
 //                    mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
                 lastTS = ts;

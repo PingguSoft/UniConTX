@@ -43,6 +43,10 @@ private:
 
     u8   mProto;
     u8   mSubProto;
+
+    u8   mFinalProto;
+    u8   mFinalSubProto;
+    u8   mProtoChCnt;
 };
 
 #endif

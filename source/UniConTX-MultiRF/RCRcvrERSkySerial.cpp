@@ -139,7 +139,7 @@ static const PROGMEM struct tbl TBL_CNV[] = {
     { MODE_FRSKY,  TX_CC2500,   255   },
     { MODE_HISKY,  TX_NRF24L01, RFProtocol::PROTO_NRF24L01_HISKY },
     { MODE_V2X2,   TX_NRF24L01, RFProtocol::PROTO_NRF24L01_V2x2  },
-    { MODE_DSM2,   TX_CYRF6936, 255  },
+    { MODE_DSM2,   TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX  },
     { MODE_DEVO,   TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO  },
     { MODE_YD717,  TX_NRF24L01, RFProtocol::PROTO_NRF24L01_YD717 },
     { MODE_KN,     TX_NRF24L01, 255 },
@@ -166,6 +166,8 @@ void RCRcvrERSkySerial::init(void)
     mState = STATE_IDLE;
     mProto    = 255;
     mSubProto = 255;
+    mFinalProto = 255;
+    mFinalSubProto = 255;
 }
 
 void RCRcvrERSkySerial::close(void)
@@ -253,14 +255,21 @@ u32 RCRcvrERSkySerial::handlePacket(u8 *data, u8 size)
     }
 
     if (proto != mProto || sub != mSubProto) {
-        LOG(F("PROTO ERSKY = %x %x\n"), proto, sub);
+        LOG(F("PROTO CHANGE = %x %x\n"), proto, sub);
         mProto    = proto;
         mSubProto = sub;
-
-        struct tbl t;
-        PROGMEM_read(&TBL_CNV[proto], t);
-        if (t.proto != 255)
-            ret = RFProtocol::buildID(t.chip, t.proto, sub);
+        mProtoChCnt = 0;
+    } else if (mProtoChCnt < 3) {
+        mProtoChCnt++;
+        if (mProtoChCnt == 3 && (proto != mFinalProto || sub != mFinalSubProto)) {
+            LOG(F("FINAL PROTO ERSKY = %x %x\n"), proto, sub);
+            mFinalProto    = proto;
+            mFinalSubProto = sub;
+            struct tbl t;
+            PROGMEM_read(&TBL_CNV[proto], t);
+            if (t.proto != 255)
+                ret = RFProtocol::buildID(t.chip, t.proto, sub);
+        }
     }
 
     return ret;
