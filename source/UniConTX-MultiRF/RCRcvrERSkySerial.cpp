@@ -240,6 +240,25 @@ u32 RCRcvrERSkySerial::handlePacket(u8 *data, u8 size)
     u8 *p  = &data[2];
     u8 dec = -3;
 
+
+    if (proto != mProto || sub != mSubProto) {
+//        LOG(F("PROTO CHANGE = %x %x\n"), proto, sub);
+        mProto    = proto;
+        mSubProto = sub;
+        mProtoChCnt = 0;
+    } else if (mProtoChCnt < 3) {
+        mProtoChCnt++;
+        if (mProtoChCnt == 3 && (proto != mFinalProto || sub != mFinalSubProto)) {
+//            LOG(F("FINAL PROTO ERSKY = %x %x\n"), proto, sub);
+            mFinalProto    = proto;
+            mFinalSubProto = sub;
+            struct tbl t;
+            PROGMEM_read(&TBL_CNV[proto], t);
+            if (t.proto != 255)
+                ret = RFProtocol::buildID(t.chip, t.proto, sub);
+        }
+    }
+
     // 11 bit * 16 channel
     for (u8 i = 0; i < 8; i++) {
         dec += 3;
@@ -252,24 +271,6 @@ u32 RCRcvrERSkySerial::handlePacket(u8 *data, u8 size)
         u32 val = *(u32*)p;
         val = ((val >> dec) & 0x7ff);
         sRC[i] =  map(val, 204, 1844, CHAN_MIN_VALUE, CHAN_MAX_VALUE);
-    }
-
-    if (proto != mProto || sub != mSubProto) {
-        LOG(F("PROTO CHANGE = %x %x\n"), proto, sub);
-        mProto    = proto;
-        mSubProto = sub;
-        mProtoChCnt = 0;
-    } else if (mProtoChCnt < 3) {
-        mProtoChCnt++;
-        if (mProtoChCnt == 3 && (proto != mFinalProto || sub != mFinalSubProto)) {
-            LOG(F("FINAL PROTO ERSKY = %x %x\n"), proto, sub);
-            mFinalProto    = proto;
-            mFinalSubProto = sub;
-            struct tbl t;
-            PROGMEM_read(&TBL_CNV[proto], t);
-            if (t.proto != 255)
-                ret = RFProtocol::buildID(t.chip, t.proto, sub);
-        }
     }
 
     return ret;

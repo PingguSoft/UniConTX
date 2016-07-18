@@ -43,6 +43,7 @@ u32 rand32()
     return rand32_r(0, 0);
 }
 
+#if __DEBUG__
 #if __STD_SERIAL__
 void LOG(char *fmt, ... )
 {
@@ -97,4 +98,5 @@ void DUMP(char *name, u8 *data, u16 cnt)
         cnt  -= i;
     }
 }
+#endif
 #endif

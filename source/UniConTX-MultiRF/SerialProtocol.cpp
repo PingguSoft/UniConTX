@@ -21,7 +21,7 @@
 #include "SerialProtocol.h"
 #include "utils.h"
 
-#define MAX_BUF_SIZE 64
+#define MAX_BUF_SIZE 128
 
 struct ringBuf {
     volatile u8 buffer[MAX_BUF_SIZE];

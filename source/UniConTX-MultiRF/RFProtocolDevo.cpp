@@ -500,7 +500,7 @@ u16 RFProtocolDevo::callStateNormal(void)
 
 u16 RFProtocolDevo::callState(void)
 {
-    return callStateTelemetry();
+    return callStateNormal();
 }
 
 int RFProtocolDevo::init(void)

@@ -107,6 +107,7 @@ static u8 initProtocol(u32 id)
             }
             break;
 
+/*
         case TX_A7105: {
             ret = 1;
             switch (RFProtocol::getProtocol(id)) {
@@ -124,6 +125,7 @@ static u8 initProtocol(u32 id)
             }
         }
         break;
+*/
     }
     return ret;
 }
@@ -138,17 +140,17 @@ void setup()
 
     LOG(F("Start!!\n"));
 
-//    mRcvr = new RCRcvrPPM();
-    mRcvr = new RCRcvrERSkySerial();
+    mRcvr = new RCRcvrPPM();
+//    mRcvr = new RCRcvrERSkySerial();
     mRcvr->init();
 
-#if 0
+#if 1
     struct Config conf;
     EEPROM.get(0, conf);
 
     conf.dwSignature = 0xCAFEBABE;
-    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
-//    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
+    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
 //    conf.dwProtoID   = RFProtocol::buildID(TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_150mW;
@@ -158,7 +160,7 @@ void setup()
         if (mRFProto) {
             mRFProto->setControllerID(conf.dwConID);
             mRFProto->setRFPower(conf.ucPower);
-//            mRFProto->init();
+            mRFProto->init();
         }
     }
 #endif
@@ -177,11 +179,11 @@ void loop()
         u32 proto = mRcvr->loop();
 
         if (proto) {
-            LOG(F("PROTO TJ :%x\n"), proto);
+//            LOG(F("PROTO TJ :%x\n"), proto);
             initProtocol(proto);
             if (mRFProto) {
                 mRFProto->setControllerID(0x12345678);
-                mRFProto->setRFPower(TXPOWER_100mW);
+                mRFProto->setRFPower(TXPOWER_150mW);
                 mRFProto->init();
             }
         }
