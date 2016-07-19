@@ -33,12 +33,12 @@
 Timer::Timer(void)
 {
     mPeriod = 0;
+    mLastEventTime = 0;
 }
 
 int8_t Timer::after(unsigned long period)
 {
     if (mPeriod != period) {
-        mLastEventTime = micros();
         mPeriod = period;
     }
     return 1;
@@ -51,7 +51,7 @@ void Timer::stop(int8_t id)
 
 void Timer::update(unsigned long now)
 {
-    unsigned long diff;
+    u32 diff;
 
     if (mPeriod == 0)
         return;
@@ -69,10 +69,10 @@ void Timer::update(unsigned long now)
 
     if (diff >= mPeriod) {
         mLastEventTime = now;
+//        if (diff > (mPeriod + (mPeriod / 10))) {
+//            LOG("LATE %ld/%ld!!!\n", diff, mPeriod);
+//        }
         handleTimer(1);
     }
-
-//    if (diff > (mPeriod + mPeriod * 0.5)) {
-//        LOG("TOO LATE !!!\n");
-//    }
 }
+

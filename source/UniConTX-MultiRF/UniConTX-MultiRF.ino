@@ -140,17 +140,17 @@ void setup()
 
     LOG(F("Start!!\n"));
 
-    mRcvr = new RCRcvrPPM();
-//    mRcvr = new RCRcvrERSkySerial();
+//    mRcvr = new RCRcvrPPM();
+    mRcvr = new RCRcvrERSkySerial();
     mRcvr->init();
 
-#if 1
+#if 0
     struct Config conf;
     EEPROM.get(0, conf);
 
     conf.dwSignature = 0xCAFEBABE;
-//    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
-    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
+    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DSMX, 0);
+//    conf.dwProtoID   = RFProtocol::buildID(TX_CYRF6936, RFProtocol::PROTO_CYRF6936_DEVO, 0);
 //    conf.dwProtoID   = RFProtocol::buildID(TX_NRF24L01, RFProtocol::PROTO_NRF24L01_SYMAX, 0);
     conf.dwConID     = 0x12345678;
     conf.ucPower     = TXPOWER_150mW;
@@ -160,7 +160,7 @@ void setup()
         if (mRFProto) {
             mRFProto->setControllerID(conf.dwConID);
             mRFProto->setRFPower(conf.ucPower);
-            mRFProto->init();
+//            mRFProto->init();
         }
     }
 #endif
@@ -168,8 +168,12 @@ void setup()
 
 s16 thr  = CHAN_MIN_VALUE;
 s16 ele  = CHAN_MID_VALUE;
+s16 ail  = CHAN_MAX_VALUE / 2;
+s16 rud  = CHAN_MIN_VALUE / 2;
 s16 step_thr = 2;
 s16 step_ele = 2;
+s16 step_ail = 2;
+s16 step_rud = 2;
 u8  sim = 0;
 
 void loop()
@@ -179,7 +183,7 @@ void loop()
         u32 proto = mRcvr->loop();
 
         if (proto) {
-//            LOG(F("PROTO TJ :%x\n"), proto);
+            LOG(F("PROTO TJ :%x\n"), proto);
             initProtocol(proto);
             if (mRFProto) {
                 mRFProto->setControllerID(0x12345678);
@@ -213,12 +217,20 @@ void loop()
                 if (ele <  CHAN_MIN_VALUE || ele > CHAN_MAX_VALUE)
                     step_ele = -step_ele;
 
+                if (ail <  CHAN_MIN_VALUE || ail > CHAN_MAX_VALUE)
+                    step_ail = -step_ail;
+
+                if (rud <  CHAN_MIN_VALUE || rud > CHAN_MAX_VALUE)
+                    step_rud = -step_rud;
+
                 thr += step_thr;
                 ele += step_ele;
+                ail += step_ail;
+                rud += step_rud;
 
                 mRcvr->setRC(RFProtocol::CH_THROTTLE, thr);
-                mRcvr->setRC(RFProtocol::CH_AILERON, ele);
-                mRcvr->setRC(RFProtocol::CH_RUDDER, ele);
+                mRcvr->setRC(RFProtocol::CH_AILERON, ail);
+                mRcvr->setRC(RFProtocol::CH_RUDDER, rud);
                 mRcvr->setRC(RFProtocol::CH_ELEVATOR, ele);
 //                LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
 //                    mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));

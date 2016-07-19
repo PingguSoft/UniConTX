@@ -46,7 +46,7 @@ typedef uint64_t u64;
 #define CHAN_MID_VALUE  0
 #define CHAN_MAX_VALUE  500
 
-#define __DEBUG__       0
-#define __STD_SERIAL__  1
+#define __DEBUG__       1
+#define __STD_SERIAL__  0
 
 #endif

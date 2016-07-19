@@ -21,7 +21,7 @@
 #define BIND_CHANNEL    0x0d        //This can be any odd channel
 #define NUM_WAIT_LOOPS  (100 / 5)   //each loop is ~5us.  Do not wait more than 100us
 
-#define __PRINT_FUNC__  //LOG(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
+#define __PRINT_FUNC__  LOG(F("%08ld : %s\n"), micros(), __PRETTY_FUNCTION__);
 
 enum {
     PROTOOPTS_DSMX = 1,
@@ -173,7 +173,7 @@ void RFProtocolDSM::build_data_packet(u8 upper)
         //Don't turn off dialog until sticks are moved
         //PROTOCOL_SetBindState(0);  //Turn off Bind dialog
         mIsBinding = 0;
-//        LOG(F("BINDING FINISH\n"));
+        LOG(F("BINDING FINISH\n"));
     }
 
     if (getProtocolOpt() & PROTOOPTS_DSMX) {
@@ -191,27 +191,21 @@ void RFProtocolDSM::build_data_packet(u8 upper)
     for (i = 0; i < 7; i++) {
        u8  idx = pgm_read_byte(chmap + (upper * 7 + i));
        u8  ch;
-       s16 value;
+       u16 value;
 
        if (idx == 0xff) {
            value = 0xffff;
        } else {
             if (mIsBinding) {
-                value = max >> 1;
-                if (idx == 0)
-                    value = 1;
+                value = (idx == 0) ? 1 : (max >> 1);
             } else {
-                if (idx < 4)
-                    ch = pgm_read_byte(ch_cvt + idx);
-                else
-                    ch = idx;
-
+                ch = (idx < 4) ? pgm_read_byte(ch_cvt + idx) : idx;
                 value = map(getControl(ch) , CHAN_MIN_VALUE, CHAN_MAX_VALUE, 0, max - 1);
             }
             value |= ((upper && i == 0) ? 0x8000 : 0) | (idx << bits);
        }
-       mPacketBuf[i*2+2] = (value >> 8) & 0xff;
-       mPacketBuf[i*2+3] = (value >> 0) & 0xff;
+       mPacketBuf[i * 2 + 2] = (value >> 8) & 0xff;
+       mPacketBuf[i * 2 + 3] = (value >> 0) & 0xff;
     }
 }
 
@@ -567,120 +561,132 @@ NO_INLINE static void parse_telemetry_packet()
 #endif
 
 
-u16 RFProtocolDSM::dsm2_cb(void)
-{
-#define CH1_CH2_DELAY 4010  // Time between write of channel 1 and channel 2
-//#define CH1_CH2_DELAY 3000  // Time between write of channel 1 and channel 2
+#define CH1_CH2_DELAY 4000  // Time between write of channel 1 and channel 2
 #define WRITE_DELAY   1550  // Time after write to verify write complete
-//#define WRITE_DELAY   1000  // Time after write to verify write complete
 #define READ_DELAY     400  // Time before write to check read state, and switch channel
 
-    if(mState < DSM2_CHANSEL) {
-        //Binding
-        mState++;
-        if(mState & 1) {
-            //Send packet on even states
-            //Note mState has already incremented,
-            // so this is actually 'even' mState
-            mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
-            return 8500;
-        } else {
-            u8  irq;
-            int i = 0;
+u16 RFProtocolDSM::dsm2_cb(void)
+{
+    u32 ts;
 
-            do {
-                irq = mDev.readReg(CYRF_04_TX_IRQ_STATUS);
-                if(++i > NUM_WAIT_LOOPS) {
-                    LOG(F("MAX WAIT IRQ : %x\n"), irq);
-                    break;
-                }
-            } while (!(irq & 0x02));
-            return 1500;
-        }
-    } else if(mState < DSM2_CH1_WRITE_A) {
-        //Select mRFChanBufs and configure for writing data
-        //CYRF_FindBestChannels(ch, 2, 10, 1, 79);
-        cyrf_configdata();
-        mDev.setRFMode(RF_TX);
-        mChanIdx = 0;
-        mState = DSM2_CH1_WRITE_A;
-        set_sop_data_crc();
-        return 10000;
-    } else if(mState == DSM2_CH1_WRITE_A || mState == DSM2_CH1_WRITE_B
-           || mState == DSM2_CH2_WRITE_A || mState == DSM2_CH2_WRITE_B)
-    {
-        if (mState == DSM2_CH1_WRITE_A || mState == DSM2_CH1_WRITE_B)
-            build_data_packet(mState == DSM2_CH1_WRITE_B);
-        mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
-        mState++;
-        return WRITE_DELAY;
-    } else if(mState == DSM2_CH1_CHECK_A || mState == DSM2_CH1_CHECK_B) {
-        int i = 0;
-        while (! (mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
-            if(++i > NUM_WAIT_LOOPS)
-                break;
-        }
-        set_sop_data_crc();
-        mState++;
-        return CH1_CH2_DELAY - WRITE_DELAY;
-    } else if(mState == DSM2_CH2_CHECK_A || mState == DSM2_CH2_CHECK_B) {
-        int i = 0;
-        while (! (mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
-            if(++i > NUM_WAIT_LOOPS)
-                break;
-        }
-        if (mState == DSM2_CH2_CHECK_A) {
-            //Keep transmit power in sync
-            mDev.writeReg(CYRF_03_TX_CFG, 0x28 | getRFPower());
-        }
-        if ((getProtocolOpt() & PROTOOPTS_TELEMETRY) == TELEM_OFF) {
-            set_sop_data_crc();
-            if (mState == DSM2_CH2_CHECK_A) {
-                if(mChanCnt < 8) {
-                    mState = DSM2_CH1_WRITE_A;
-                    return 22000 - CH1_CH2_DELAY - WRITE_DELAY;
-                }
-                mState = DSM2_CH1_WRITE_B;
-            } else {
-                mState = DSM2_CH1_WRITE_A;
-            }
-            return 11000 - CH1_CH2_DELAY - WRITE_DELAY;
-        } else {
+    switch (mState) {
+        default:
+            //binding
             mState++;
-            mDev.setRFMode(RF_RX); //Receive mode
-            mDev.writeReg(CYRF_05_RX_CTRL, 0x80); //Prepare to receive
-            return 11000 - CH1_CH2_DELAY - WRITE_DELAY - READ_DELAY;
-        }
-    } else if(mState == DSM2_CH2_READ_A || mState == DSM2_CH2_READ_B) {
-        //Read telemetry if needed
-        u8 rx_state = mDev.readReg(CYRF_07_RX_IRQ_STATUS);
-        if((rx_state & 0x03) == 0x02) {  // RXC=1, RXE=0 then 2nd check is required (debouncing)
-            rx_state |= mDev.readReg(CYRF_07_RX_IRQ_STATUS);
-        }
-        if((rx_state & 0x07) == 0x02) { // good data (complete with no errors)
-            mDev.writeReg(CYRF_07_RX_IRQ_STATUS, 0x80); // need to set RXOW before data read
-            mDev.writePayload(mPacketBuf, mDev.readReg(CYRF_09_RX_COUNT));
-            //parse_telemetry_packet();
-        }
-        if (mState == DSM2_CH2_READ_A && mChanCnt < 8) {
-            mState = DSM2_CH2_READ_B;
-            //Reseat RX mode just in case any error
-            mDev.writeReg(CYRF_0F_XACT_CFG, (mDev.readReg(CYRF_0F_XACT_CFG) | 0x20));  // Force end mState
-            int i = 0;
-            while (mDev.readReg(CYRF_0F_XACT_CFG) & 0x20) {
-                if(++i > NUM_WAIT_LOOPS)
-                    break;
+            if(mState & 1) {
+                //Send packet on even states
+                //Note mState has already incremented,
+                // so this is actually 'even' mState
+                mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
+                return 5000;
+            } else {
+                ts = micros();
+                while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
+                    if(micros() - ts > 500) {
+                       LOG(F("MAX WAIT IRQ1\n"));
+                        break;
+                    }
+                }
+                return 5000;
             }
-            mDev.writeReg(CYRF_05_RX_CTRL, 0x80); //Prepare to receive
-            return 11000;
-        }
-        if (mState == DSM2_CH2_READ_A)
-            mState = DSM2_CH1_WRITE_B;
-        else
+            break;
+
+        case DSM2_CHANSEL:
+            //Select mRFChanBufs and configure for writing data
+            //CYRF_FindBestChannels(ch, 2, 10, 1, 79);
+            cyrf_configdata();
+            mDev.setRFMode(RF_TX);
+            mChanIdx = 0;
             mState = DSM2_CH1_WRITE_A;
-        mDev.setRFMode(RF_TX); //Write mode
-        set_sop_data_crc();
-        return READ_DELAY;
+            set_sop_data_crc();
+            return 10000;
+
+        case DSM2_CH1_WRITE_A:
+        case DSM2_CH1_WRITE_B:
+            build_data_packet(mState == DSM2_CH1_WRITE_B);
+        case DSM2_CH2_WRITE_A:
+        case DSM2_CH2_WRITE_B:
+            mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
+            mState++;
+            return WRITE_DELAY;
+
+        case DSM2_CH1_CHECK_A:
+        case DSM2_CH1_CHECK_B:
+            ts = micros();
+            while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
+                if(micros() - ts > 500) {
+                    LOG(F("MAX WAIT IRQ2\n"));
+                    break;
+                }
+            }
+            set_sop_data_crc();
+            mState++;
+            return CH1_CH2_DELAY - WRITE_DELAY;
+
+        case DSM2_CH2_CHECK_A:
+        case DSM2_CH2_CHECK_B:
+            ts = micros();
+            while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
+                if(micros() - ts > 500) {
+                    LOG(F("MAX WAIT IRQ3\n"));
+                    break;
+                }
+            }
+            if (mState == DSM2_CH2_CHECK_A) {
+                //Keep transmit power in sync
+                mDev.writeReg(CYRF_03_TX_CFG, 0x28 | getRFPower());
+            }
+            if ((getProtocolOpt() & PROTOOPTS_TELEMETRY) == TELEM_OFF) {
+                set_sop_data_crc();
+                if (mState == DSM2_CH2_CHECK_A) {
+                    if(mChanCnt < 8) {
+                        mState = DSM2_CH1_WRITE_A;
+                        return 22000 - CH1_CH2_DELAY - WRITE_DELAY;
+                    }
+                    mState = DSM2_CH1_WRITE_B;
+                } else {
+                    mState = DSM2_CH1_WRITE_A;
+                }
+                return 11000 - CH1_CH2_DELAY - WRITE_DELAY;
+            } else {
+                mState++;
+                mDev.setRFMode(RF_RX); //Receive mode
+                mDev.writeReg(CYRF_05_RX_CTRL, 0x80); //Prepare to receive
+                return 11000 - CH1_CH2_DELAY - WRITE_DELAY - READ_DELAY;
+            }
+            break;
+
+        case DSM2_CH2_READ_A:
+        case DSM2_CH2_READ_B:
+            //Read telemetry if needed
+            u8 rx_state = mDev.readReg(CYRF_07_RX_IRQ_STATUS);
+            if((rx_state & 0x03) == 0x02) {  // RXC=1, RXE=0 then 2nd check is required (debouncing)
+                rx_state |= mDev.readReg(CYRF_07_RX_IRQ_STATUS);
+            }
+            if((rx_state & 0x07) == 0x02) { // good data (complete with no errors)
+                mDev.writeReg(CYRF_07_RX_IRQ_STATUS, 0x80); // need to set RXOW before data read
+                mDev.writePayload(mPacketBuf, mDev.readReg(CYRF_09_RX_COUNT));
+                //parse_telemetry_packet();
+            }
+            if (mState == DSM2_CH2_READ_A && mChanCnt < 8) {
+                mState = DSM2_CH2_READ_B;
+                //Reseat RX mode just in case any error
+                mDev.writeReg(CYRF_0F_XACT_CFG, (mDev.readReg(CYRF_0F_XACT_CFG) | 0x20));  // Force end mState
+                int i = 0;
+                while (mDev.readReg(CYRF_0F_XACT_CFG) & 0x20) {
+                    if(++i > NUM_WAIT_LOOPS)
+                        break;
+                }
+                mDev.writeReg(CYRF_05_RX_CTRL, 0x80); //Prepare to receive
+                return 11000;
+            }
+            if (mState == DSM2_CH2_READ_A)
+                mState = DSM2_CH1_WRITE_B;
+            else
+                mState = DSM2_CH1_WRITE_A;
+            mDev.setRFMode(RF_TX); //Write mode
+            set_sop_data_crc();
+            return READ_DELAY;
     }
     return 0;
 }
