@@ -198,7 +198,7 @@ void RFProtocolHiSky::init1(void)
 
 static const PROGMEM u8 BINDING_ADDR[5] = { 0x12,0x23,0x23,0x45,0x78 };        // fixed binding ids for all planes
 
-u16 RFProtocolHiSky::callState(void)
+u16 RFProtocolHiSky::callState(u32 now, u32 expected)
 {
     mCtr1ms++;
 

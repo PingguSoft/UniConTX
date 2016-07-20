@@ -140,11 +140,11 @@ void setup()
 
     LOG(F("Start!!\n"));
 
-//    mRcvr = new RCRcvrPPM();
-    mRcvr = new RCRcvrERSkySerial();
+    mRcvr = new RCRcvrPPM();
+//    mRcvr = new RCRcvrERSkySerial();
     mRcvr->init();
 
-#if 0
+#if 1
     struct Config conf;
     EEPROM.get(0, conf);
 
@@ -175,11 +175,13 @@ s16 step_ele = 2;
 s16 step_ail = 2;
 s16 step_rud = 2;
 u8  sim = 0;
-
+u32 ts = 0;
 void loop()
 {
+    ts = micros();
+
     if (mRcvr) {
-#if 1
+#if 0
         u32 proto = mRcvr->loop();
 
         if (proto) {
@@ -209,8 +211,7 @@ void loop()
 
         if (sim) {
             static u32 lastTS;
-            u32 ts = millis();
-            if (ts - lastTS > 20) {
+            if (ts - lastTS > 20000) {
                 if (thr <  CHAN_MIN_VALUE || thr > CHAN_MAX_VALUE)
                     step_thr = -step_thr;
 
@@ -238,21 +239,11 @@ void loop()
             }
         }
 #endif
-
-#if 0
-        static u32 lastTS;
-        u32 ts = millis();
-        if (ts - lastTS > 200) {
-            LOG("T:%4d R:%4d E:%4d A:%4d %4d %4d %4d %4d\n", mRcvr->getRC(0), mRcvr->getRC(1), mRcvr->getRC(2), mRcvr->getRC(3), mRcvr->getRC(4),
-                mRcvr->getRC(5), mRcvr->getRC(6), mRcvr->getRC(7), mRcvr->getRC(8));
-            lastTS = ts;
-        }
-#endif
     }
 
     if (mRFProto) {
         mRFProto->injectControls(mRcvr->getRCs(), mRcvr->getChCnt());
-        mRFProto->loop();
+        mRFProto->loop(ts);
     }
 }
 

@@ -121,7 +121,7 @@ void DeviceCYRF6936::setRFModeImpl(enum RF_MODE mode)
         mod  = 0x2C;        // force SYNTH MODE (C) = RX
         gpio = 0x20;        // XOUT(7)=0, PACTL(5)=1       PACTL is a switch for RX
     } else {
-        mod  = 0x24;        // force IDLE
+        mod  = 0x24;        // force IDLE (4)
         gpio = 0x00;
     }
     writeReg(CYRF_0E_GPIO_CTRL, gpio);

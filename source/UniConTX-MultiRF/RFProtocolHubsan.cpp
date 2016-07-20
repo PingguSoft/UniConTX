@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -87,7 +87,7 @@ int RFProtocolHubsan::init1(void)
     }
     if (millis() - ms >= 500)
         return 0;
-    
+
     if_calibration1 = mDev.readReg(A7105_22_IF_CALIB_I);
     mDev.readReg(A7105_24_VCO_CURCAL);
     if(if_calibration1 & A7105_MASK_FBCF) {
@@ -190,7 +190,7 @@ s16 RFProtocolHubsan::getChannel(u8 ch, s32 scale, s32 center, s32 range)
 void RFProtocolHubsan::buildPacket(void)
 {
     static s16 vtx_freq = 0;
-    
+
     memset(mPacketBuf, 0, MAX_PACKET_SIZE);
 
     // set vTX frequency (H107D)
@@ -200,14 +200,14 @@ void RFProtocolHubsan::buildPacket(void)
         mPacketBuf[1] = (vtx_freq >> 8) & 0xff;
         mPacketBuf[2] = vtx_freq & 0xff;
         mPacketBuf[3] = 0x82;
-        mPacketCtr++;      
+        mPacketCtr++;
     } else {                                                            //20 00 00 00 80 00 7d 00 84 02 64 db 04 26 79 7b
         mPacketBuf[0] = 0x20;
         mPacketBuf[2] = getChannel(CH_THROTTLE, 0x80, 0x80, 0x80);      //Throttle
     }
     mPacketBuf[4] = 0xff - getChannel(CH_RUDDER, 0x80, 0x80, 0x80);     //Rudder is reversed
     mPacketBuf[6] = 0xff - getChannel(CH_ELEVATOR, 0x80, 0x80, 0x80);   //Elevator is reversed
-    mPacketBuf[8] = getChannel(CH_AILERON, 0x80, 0x80, 0x80);           //Aileron 
+    mPacketBuf[8] = getChannel(CH_AILERON, 0x80, 0x80, 0x80);           //Aileron
 
     if(mPacketCtr < 100) {
         mPacketBuf[9] = 0x02 | FLAG_LED | FLAG_FLIP;                    // sends default value for the 100 first packets
@@ -232,7 +232,7 @@ void RFProtocolHubsan::buildPacket(void)
     updateCRC();
 }
 
-u8 RFProtocolHubsan::checkIntegrity(void) 
+u8 RFProtocolHubsan::checkIntegrity(void)
 {
     int sum = 0;
     for(int i = 0; i < MAX_PACKET_SIZE - 1; i++)
@@ -240,14 +240,14 @@ u8 RFProtocolHubsan::checkIntegrity(void)
     return mPacketBuf[MAX_PACKET_SIZE - 1] == ((256 - (sum % 256)) & 0xff);
 }
 
-u16 RFProtocolHubsan::callState(void)
+u16 RFProtocolHubsan::callState(u32 now, u32 expected)
 {
     static u16 delay = 0;
     static u8  txState = 0;
     static u8  rfMode=0;
-    
+
     u8 i;
-    
+
     switch (mState) {
         case BIND_1:
         case BIND_3:
@@ -258,7 +258,7 @@ u16 RFProtocolHubsan::callState(void)
             mDev.writeData(mPacketBuf, 16, mCurRFChan);
             mState |= WAIT_WRITE;
             return 3000;
-            
+
         case BIND_1 | WAIT_WRITE:
         case BIND_3 | WAIT_WRITE:
         case BIND_5 | WAIT_WRITE:
@@ -275,7 +275,7 @@ u16 RFProtocolHubsan::callState(void)
             mState &= ~WAIT_WRITE;
             mState++;
             return 4500;                            //7.5msec elapsed since last write
-            
+
         case BIND_2:
         case BIND_4:
         case BIND_6:
@@ -284,14 +284,14 @@ u16 RFProtocolHubsan::callState(void)
                 mState = BIND_1;
                 return 4500;                        //No signal, restart binding procedure.  12msec elapsed since last write
             }
-            
+
             mDev.readData(mPacketBuf, MAX_PACKET_SIZE);
             mState++;
             if (mState == BIND_5) {
                 u32 id = ((u32)mPacketBuf[2] << 24) | ((u32)mPacketBuf[3] << 16) | ((u32)mPacketBuf[4] << 8) | mPacketBuf[5];
                 mDev.writeID(id);
             }
-            
+
             return 500;                             //8msec elapsed time since last write;
 
         case BIND_8:
@@ -335,7 +335,7 @@ u16 RFProtocolHubsan::callState(void)
                         for (i = 0; i < 10; i++) {
                             if (!(mDev.readReg(A7105_00_MODE) & 0x01)) {// wait for tx completion
                                 mDev.setRFMode(RF_RX);
-                                mDev.strobe(A7105_RX); 
+                                mDev.strobe(A7105_RX);
                                 rfMode = A7105_RX;
                                 break;
                             }
@@ -354,7 +354,7 @@ u16 RFProtocolHubsan::callState(void)
                 }
                 delay = 1000;
             }
-            
+
             if (++txState == 8) { // 3ms + 7 * 1ms = 10ms
                 mDev.setRFMode(RF_TX);
                 txState = 0;
@@ -391,7 +391,7 @@ int RFProtocolHubsan::init(void)
 int RFProtocolHubsan::close(void)
 {
     //printf(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
-    
+
     RFProtocol::close();
     mDev.initialize();
     return (mDev.reset() ? 1L : -1L);

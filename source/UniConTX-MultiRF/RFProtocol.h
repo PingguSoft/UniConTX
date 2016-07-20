@@ -18,11 +18,10 @@
 
 #include "Common.h"
 #include "utils.h"
-#include "Timer.h"
 #include "DeviceCommon.h"
 #include "Telemetry.h"
 
-class RFProtocol : public Timer
+class RFProtocol
 {
 public:
     enum {
@@ -120,21 +119,17 @@ public:
     bool isRFPowerUpdated(void);
     void clearRFPowerUpdated(void);
 
-
-    void startState(unsigned long period);
+    void startState(u16 period);
     Telemetry getTM(void)           { return mTM;   }
 
-    // for timer
-    virtual void handleTimer(s8 id);
-
     // for protocol
-    virtual void loop(void);
+    virtual void loop(u32 now);
     virtual int  init(void);
     virtual int  close(void);
     virtual int  reset(void);
     virtual int  setRFPower(u8 power);
     virtual int  getInfo(s8 id, u8 *data);
-    virtual u16  callState(void) = 0;
+    virtual u16  callState(u32 now, u32 expected) = 0;
 
 private:
     void initVars();
@@ -142,10 +137,12 @@ private:
     u32  mProtoID;
     u32  mConID;
     s16  mBufControls[MAX_CHANNEL];
-    s8   mTmrState;
     u8   mTXPower;
 
     Telemetry   mTM;
+
+    u32 mLastTS;
+    u16 mPeriod;
 };
 
 #endif

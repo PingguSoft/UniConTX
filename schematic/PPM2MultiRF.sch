@@ -2136,8 +2136,8 @@ W = angled&lt;p&gt;
 <instance part="R1" gate="G$1" x="160.02" y="142.24"/>
 <instance part="R2" gate="G$1" x="160.02" y="144.78"/>
 <instance part="R3" gate="G$1" x="160.02" y="147.32"/>
-<instance part="R4" gate="G$1" x="160.02" y="152.4"/>
-<instance part="R5" gate="G$1" x="160.02" y="154.94"/>
+<instance part="R4" gate="G$1" x="160.02" y="157.48"/>
+<instance part="R5" gate="G$1" x="160.02" y="160.02"/>
 <instance part="R8" gate="G$1" x="160.02" y="162.56"/>
 <instance part="R9" gate="G$1" x="160.02" y="165.1"/>
 <instance part="R11" gate="G$1" x="160.02" y="167.64"/>
@@ -2567,8 +2567,8 @@ W = angled&lt;p&gt;
 <label x="223.52" y="154.94" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="165.1" y1="154.94" x2="182.88" y2="154.94" width="0.1524" layer="91"/>
-<label x="167.64" y="154.94" size="1.778" layer="95"/>
+<wire x1="165.1" y1="160.02" x2="182.88" y2="160.02" width="0.1524" layer="91"/>
+<label x="167.64" y="160.02" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="CSN_2500" class="0">
@@ -2600,8 +2600,8 @@ W = angled&lt;p&gt;
 <label x="223.52" y="152.4" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="165.1" y1="152.4" x2="182.88" y2="152.4" width="0.1524" layer="91"/>
-<label x="167.64" y="152.4" size="1.778" layer="95"/>
+<wire x1="165.1" y1="157.48" x2="182.88" y2="157.48" width="0.1524" layer="91"/>
+<label x="167.64" y="157.48" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="D0" class="0">

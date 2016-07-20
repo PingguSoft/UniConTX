@@ -498,7 +498,7 @@ u16 RFProtocolDevo::callStateNormal(void)
     return 1200;
 }
 
-u16 RFProtocolDevo::callState(void)
+u16 RFProtocolDevo::callState(u32 now, u32 expected)
 {
     return callStateNormal();
 }

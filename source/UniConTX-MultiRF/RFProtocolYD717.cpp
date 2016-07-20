@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -58,14 +58,14 @@ u8 RFProtocolYD717::checkStatus()
 {
     u8 stat = mDev.readReg(NRF24L01_07_STATUS);
 
-    switch (stat & (BV(NRF24L01_07_TX_DS) | BV(NRF24L01_07_MAX_RT))) 
+    switch (stat & (BV(NRF24L01_07_TX_DS) | BV(NRF24L01_07_MAX_RT)))
     {
     case BV(NRF24L01_07_TX_DS):
         return PKT_ACKED;
     case BV(NRF24L01_07_MAX_RT):
         return PKT_TIMEOUT;
     }
-    
+
     return PKT_PENDING;
 }
 
@@ -136,7 +136,7 @@ void RFProtocolYD717::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ai
     if (RFProtocol::getControl(CH_AUX5) <= 0)
       *flags &= ~FLAG_HEADLESS;
     else
-      *flags |= FLAG_HEADLESS;    
+      *flags |= FLAG_HEADLESS;
 }
 
 void RFProtocolYD717::sendPacket(u8 bind)
@@ -165,7 +165,7 @@ void RFProtocolYD717::sendPacket(u8 bind)
         mDev.writePayload(mPacketBuf, 8);
     } else {
         mPacketBuf[8] = mPacketBuf[0];  // checksum
-        for(u8 i=1; i < 8; i++) 
+        for(u8 i=1; i < 8; i++)
             mPacketBuf[8] += mPacketBuf[i];
         mPacketBuf[8] = ~mPacketBuf[8];
         mDev.writePayload(mPacketBuf, 9);
@@ -235,7 +235,7 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
 void RFProtocolYD717::init1(void)
 {
     u8 val;
-    
+
     mDev.initialize();
     mDev.setRFMode(RF_TX);
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) ; i++) {
@@ -249,7 +249,7 @@ void RFProtocolYD717::init1(void)
         }
     }
     mDev.writeReg(NRF24L01_1C_DYNPD, 0x3F);       // Enable dynamic payload length on all pipes
-    
+
     // this sequence necessary for module from stock tx
     mDev.readReg(NRF24L01_1D_FEATURE);
     mDev.activate(0x73);                          // Activate feature register
@@ -265,15 +265,15 @@ void RFProtocolYD717::init2(void)
 {
     // for bind packets set address to prearranged value known to receiver
     u8 bind_rx_tx_addr[5];
-    
+
     if (getProtocolOpt() == PROTO_OPT_SYMA_X4) {
-        for (u8 i=0; i < 5; i++) 
+        for (u8 i=0; i < 5; i++)
             bind_rx_tx_addr[i]  = 0x60;
     } else if (getProtocolOpt() == PROTO_OPT_NI_HUI) {
-        for( u8 i=0; i < 5; i++) 
+        for( u8 i=0; i < 5; i++)
             bind_rx_tx_addr[i]  = 0x64;
     } else {
-        for (u8 i=0; i < 5; i++) 
+        for (u8 i=0; i < 5; i++)
             bind_rx_tx_addr[i]  = 0x65;
     }
 
@@ -297,7 +297,7 @@ void RFProtocolYD717::updateTelemetry(void) {
 }
 #endif
 
-u16 RFProtocolYD717::callState(void)
+u16 RFProtocolYD717::callState(u32 now, u32 expected)
 {
     switch (mState) {
     case YD717_INIT1:

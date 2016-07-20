@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -73,7 +73,7 @@ enum {
 u8 RFProtocolV2x2::getCheckSum(u8 *data)
 {
     u8 sum = 0;
-    for (u8 i = 0; i < MAX_PACKET_SIZE - 1;  ++i) 
+    for (u8 i = 0; i < MAX_PACKET_SIZE - 1;  ++i)
         sum += data[i];
     return sum;
 }
@@ -114,11 +114,11 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
     // channels values by min..max range
     u8 a;
 
-    *throttle = getChannel(CH_THROTTLE);    
+    *throttle = getChannel(CH_THROTTLE);
 
     a         = getChannel(CH_RUDDER);
     *rudder   = a < 0x80 ? 0x7f - a : a;
-    
+
     a         = getChannel(CH_ELEVATOR);
     *elevator = a < 0x80 ? 0x7f - a : a;
 
@@ -129,7 +129,7 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
     // Channel 5
     // 512 - slow blinking (period 4ms*2*512 ~ 4sec), 64 - fast blinking (4ms*2*64 ~ 0.5sec)
     u16 nNewLedBlinkCtr;
-    
+
     s32 ch = RFProtocol::getControl(CH_AUX1);
     if (ch == CHAN_MIN_VALUE) {
         nNewLedBlinkCtr = BLINK_COUNT_MAX + 1;
@@ -148,7 +148,7 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
 #endif
     }
     if (*led_blink != nNewLedBlinkCtr) {
-        if (mBindCtr > nNewLedBlinkCtr) 
+        if (mBindCtr > nNewLedBlinkCtr)
             mBindCtr = nNewLedBlinkCtr;
         *led_blink = nNewLedBlinkCtr;
     }
@@ -172,15 +172,15 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
         *flags |= FLAG_VIDEO;
 
     // Channel 9
-    if (RFProtocol::getControl(CH_AUX5) <= 0) 
+    if (RFProtocol::getControl(CH_AUX5) <= 0)
         *flags &= ~FLAG_HEADLESS;
-    else 
+    else
         *flags |= FLAG_HEADLESS;
 
     // Channel 10
     if (RFProtocol::getControl(CH_AUX6)  <= 0)
         *flags &= ~FLAG_MAG_CAL_X;
-    else 
+    else
         *flags |= FLAG_MAG_CAL_X;
 
     // Channel 11
@@ -188,7 +188,7 @@ void RFProtocolV2x2::getControls(u8* throttle, u8* rudder, u8* elevator, u8* ail
         *flags &= ~FLAG_MAG_CAL_Y;
     else
         *flags |= FLAG_MAG_CAL_Y;
-    
+
 }
 
 void RFProtocolV2x2::sendPacket(u8 bind)
@@ -300,7 +300,7 @@ static const PROGMEM u8 TBL_INIT_REGS[] = {
 void RFProtocolV2x2::init1(void)
 {
     u8 val;
-    
+
     mDev.initialize();
     for (u8 i = 0; i < sizeof(TBL_INIT_REGS) ; i++) {
         if (i == NRF24L01_06_RF_SETUP) {
@@ -356,17 +356,17 @@ void RFProtocolV2x2::setTxID(u32 id)
     mRxTxAddrBuf[2] = (id >> 0) & 0xFF;
     sum = mRxTxAddrBuf[0] + mRxTxAddrBuf[1] + mRxTxAddrBuf[2];
 
-    
+
     const u8 *fh_row = FREQ_HOPPING[sum & 0x03];        // Base row is defined by lowest 2 bits
     u8 increment = (sum & 0x1e) >> 2;                   // Higher 3 bits define increment to corresponding row
-    
+
     for (u8 i = 0; i < 16; ++i) {
         u8 val = pgm_read_byte(fh_row[i] + increment);
         mRFChanBufs[i] = (val & 0x0f) ? val : val - 3;  // Strange avoidance of channels divisible by 16
     }
 }
 
-u16 RFProtocolV2x2::callState(void)
+u16 RFProtocolV2x2::callState(u32 now, u32 expected)
 {
     switch (mState) {
     case V202_INIT2:
@@ -381,7 +381,7 @@ u16 RFProtocolV2x2::callState(void)
 
     case V202_BIND1:
         sendPacket(1);
-        if (getChannel(CH_THROTTLE) >= 240) 
+        if (getChannel(CH_THROTTLE) >= 240)
             mState = V202_BIND2;
         break;
 

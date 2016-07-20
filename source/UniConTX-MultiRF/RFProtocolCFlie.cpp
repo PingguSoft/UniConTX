@@ -230,7 +230,7 @@ void RFProtocolCFlie::init1(void)
 }
 
 
-u16 RFProtocolCFlie::callState(void)
+u16 RFProtocolCFlie::callState(u32 now, u32 expected)
 {
     switch (mState) {
     case CFLIE_INIT_SEARCH:

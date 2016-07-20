@@ -37,7 +37,7 @@ public:
     virtual int  close(void);
     virtual int  reset(void);
     virtual int  getInfo(s8 id, u8 *data);
-    virtual u16  callState(void);
+    virtual u16  callState(u32 now, u32 expected);
 
 private:
     void build_bind_packet(void);
@@ -48,24 +48,21 @@ private:
     void cyrf_configdata(void);
     void set_sop_data_crc(void);
     void calc_dsmx_channel(void);
-    u16  dsm2_cb(void);
+    u16  dsm2_cb(u32 now, u32 expected);
     void initialize(u8 bind);
     void buildPacket(void);
 
 // variables
     DeviceCYRF6936  mDev;
-    s16  mBindCtr;
     u8   mRFChanBufs[MAX_RF_CHANNELS];
     u8   mPacketBuf[MAX_PACKET_SIZE];
-    u8   mRxTxAddrBuf[ADDR_BUF_SIZE];
     u8   mMfgIDBuf[MFG_ID_SIZE];
 
-    u8   mPacketCtr;
     u8   mChanIdx;
-    u16  mState;
     u8   mSOPCol;
     u8   mDataCol;
     u16  mCRC;
+    u16  mState;
     u8   mChanCnt;
     u8   mIsBinding;
 

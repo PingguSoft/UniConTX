@@ -5,11 +5,11 @@
  (at your option) any later version.
 
  This program is derived from deviationTx project for Arduino.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details. 
+ GNU General Public License for more details.
  see <http://www.gnu.org/licenses/>
 */
 
@@ -106,7 +106,7 @@ int RFProtocolFlysky::init1(void)
     }
     if (millis() - ms >= 500)
         return 0;
-    
+
     if_calibration1 = mDev.readReg(A7105_22_IF_CALIB_I);
     mDev.readReg(A7105_24_VCO_CURCAL);
     if(if_calibration1 & A7105_MASK_FBCF) {
@@ -123,7 +123,7 @@ int RFProtocolFlysky::init1(void)
     //VCO Bank Calibrate channel 0?
     //Set Channel
     mDev.writeReg(A7105_0F_CHANNEL, 0);
-    
+
     //VCO Calibration
     mDev.writeReg(0x02, 2);
     ms = millis();
@@ -167,9 +167,9 @@ int RFProtocolFlysky::init1(void)
     return 1;
 }
 
-static const PROGMEM u8 X17_SEQ[10] = 
+static const PROGMEM u8 X17_SEQ[10] =
     { 0x14, 0x31, 0x40, 0x49, 0x49,    // sometime first byte is 0x15
-      0x49, 0x49, 0x49, 0x49, 0x49, }; 
+      0x49, 0x49, 0x49, 0x49, 0x49, };
 
 void RFProtocolFlysky::applyExtFlags(void)
 {
@@ -236,7 +236,7 @@ void RFProtocolFlysky::applyExtFlags(void)
             else
                 mPacketBuf[18] = 0x00;
             mPacketBuf[19] = 0x00; // unknown
-            mPacketBuf[20] = 0x00; // unknown            
+            mPacketBuf[20] = 0x00; // unknown
             break;
     }
 }
@@ -264,7 +264,7 @@ void RFProtocolFlysky::buildPacket(u8 init)
     applyExtFlags();
 }
 
-u16 RFProtocolFlysky::callState(void)
+u16 RFProtocolFlysky::callState(u32 now, u32 expected)
 {
     if (mBindCtr) {
         buildPacket(1);
@@ -314,7 +314,7 @@ int RFProtocolFlysky::init(void)
 int RFProtocolFlysky::close(void)
 {
     //printf(F("%08ld : %s\n"), millis(), __PRETTY_FUNCTION__);
-    
+
     RFProtocol::close();
     mDev.initialize();
     return (mDev.reset() ? 1L : -1L);

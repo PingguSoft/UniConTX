@@ -28,13 +28,13 @@ void RFProtocol::initVars(void)
 {
     memset(mBufControls, 0, sizeof(mBufControls));
     mBufControls[CH_THROTTLE] = CHAN_MIN_VALUE;
-
-    mTmrState = -1;
     mTXPower  = TXPOWER_10mW;
 }
 
 RFProtocol::RFProtocol(u32 id)
 {
+    mLastTS  = 0;
+    mPeriod  = 0;
     mProtoID = id;
     initVars();
 }
@@ -43,9 +43,13 @@ RFProtocol::~RFProtocol()
 {
 }
 
-void RFProtocol::loop(void)
+void RFProtocol::loop(u32 now)
 {
-    update(micros());
+    u32 expected = mLastTS + mPeriod;
+    if (mPeriod > 0 && now >= expected) {
+        mLastTS = now;
+        mPeriod = callState(now, expected);
+    }
 }
 
 int RFProtocol::init(void)
@@ -55,8 +59,6 @@ int RFProtocol::init(void)
 
 int RFProtocol::close(void)
 {
-    if (mTmrState > 0)
-        stop(mTmrState);
     return 0;
 }
 
@@ -139,22 +141,10 @@ u8 RFProtocol::isStickMoved(u8 init)
     return ((ele_diff + ail_diff > 2 * STICK_MOVEMENT * CHAN_MAX_VALUE / 100));
 }
 
-void RFProtocol::handleTimer(s8 id)
+void RFProtocol::startState(u16 period)
 {
-    u16 nextTime;
-
-    if (id == mTmrState) {
-        nextTime = callState();
-        if (nextTime > 0)
-            mTmrState = after(nextTime);
-        else
-            stop(mTmrState);
-    }
-}
-
-void RFProtocol::startState(unsigned long period)
-{
-    mTmrState = after(period);
+    mLastTS = micros();
+    mPeriod = period;
 }
 
 // E A T R : deviation channel order

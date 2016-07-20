@@ -381,7 +381,7 @@ void RFProtocolSyma::setRFChannel(u8 address)
     }
 }
 
-u16 RFProtocolSyma::callState(void)
+u16 RFProtocolSyma::callState(u32 now, u32 expected)
 {
     switch (mState) {
     case SYMAX_INIT1:

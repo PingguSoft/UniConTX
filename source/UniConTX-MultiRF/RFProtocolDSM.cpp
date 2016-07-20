@@ -52,7 +52,7 @@ enum {
 };
 
 static const PROGMEM u8 TBL_PNCODES[5][9][8] = {
-    /* Note these are in order transmitted (LSB 1st) */
+      /* Note these are in order transmitted (LSB 1st) */
     { /* Row 0 */
       /* Col 0 */ {0x03, 0xBC, 0x6E, 0x8A, 0xEF, 0xBD, 0xFE, 0xF8},
       /* Col 1 */ {0x88, 0x17, 0x13, 0x3B, 0x2D, 0xBF, 0x06, 0xD6},
@@ -170,8 +170,6 @@ void RFProtocolDSM::build_data_packet(u8 upper)
     const u8 *chmap = ch_map[mChanCnt - 4];
 
     if (mIsBinding && isStickMoved(0)) {
-        //Don't turn off dialog until sticks are moved
-        //PROTOCOL_SetBindState(0);  //Turn off Bind dialog
         mIsBinding = 0;
         LOG(F("BINDING FINISH\n"));
     }
@@ -191,7 +189,7 @@ void RFProtocolDSM::build_data_packet(u8 upper)
     for (i = 0; i < 7; i++) {
        u8  idx = pgm_read_byte(chmap + (upper * 7 + i));
        u8  ch;
-       u16 value;
+       u16 value = 0;
 
        if (idx == 0xff) {
            value = 0xffff;
@@ -200,8 +198,10 @@ void RFProtocolDSM::build_data_packet(u8 upper)
                 value = (idx == 0) ? 1 : (max >> 1);
             } else {
                 ch = (idx < 4) ? pgm_read_byte(ch_cvt + idx) : idx;
-                value = map(getControl(ch) , CHAN_MIN_VALUE, CHAN_MAX_VALUE, 0, max - 1);
+                value = map(getControl(ch) , CHAN_MIN_VALUE, CHAN_MAX_VALUE, 0, max - 5);
             }
+            if (value >= max)
+                value = max - 1;
             value |= ((upper && i == 0) ? 0x8000 : 0) | (idx << bits);
        }
        mPacketBuf[i * 2 + 2] = (value >> 8) & 0xff;
@@ -211,9 +211,7 @@ void RFProtocolDSM::build_data_packet(u8 upper)
 
 u8 RFProtocolDSM::get_pn_row(u8 channel)
 {
-    return (getProtocolOpt() & PROTOOPTS_DSMX)
-           ? (channel - 2) % 5
-           : channel % 5;
+    return (getProtocolOpt() & PROTOOPTS_DSMX) ? ((channel - 2) % 5) : (channel % 5);
 }
 
 static const PROGMEM u8 TBL_INIT_VALS[][2] = {
@@ -269,14 +267,10 @@ void RFProtocolDSM::initialize_bind_state(void)
     //LOG(F("Ch: %d Row: %d SOP: %d Data: %d\n"), BIND_CHANNEL, pn_row, mSOPCol, mDataCol);
     mDev.setCRCSeed(mCRC);
     mDev.setSOPCode_P(TBL_PNCODES[pn_row][mSOPCol], 8);
-    memcpy_P(data_code, TBL_PNCODES[pn_row][mSOPCol], 8);
-    //DUMP("sop_code", data_code, 8);
-
     memcpy_P(data_code, TBL_PNCODES[pn_row][mDataCol], 16);
     memcpy_P(data_code + 16, TBL_PNCODES[0][8], 8);
     memcpy_P(data_code + 24, TBL_PN_BIND, 8);
     mDev.setDataCode(data_code, 32);
-    //DUMP("data_code", data_code, 32);
     build_bind_packet();
 }
 
@@ -337,17 +331,17 @@ void RFProtocolDSM::set_sop_data_crc(void)
 void RFProtocolDSM::calc_dsmx_channel(void)
 {
     __PRINT_FUNC__;
-    int idx = 0;
-    u32 id = ~((mMfgIDBuf[0] << 24) | (mMfgIDBuf[1] << 16) | (mMfgIDBuf[2] << 8) | (mMfgIDBuf[3] << 0));
+    u8  idx = 0;
+    u32 id = ~(((u32)mMfgIDBuf[0] << 24) | ((u32)mMfgIDBuf[1] << 16) | ((u32)mMfgIDBuf[2] << 8) | ((u32)mMfgIDBuf[3] << 0));
     u32 id_tmp = id;
 
-    while(idx < 23) {
-        int i;
-        int count_3_27 = 0, count_28_51 = 0, count_52_76 = 0;
+    while (idx < 23) {
+        u8 i;
+        u8 count_3_27 = 0, count_28_51 = 0, count_52_76 = 0;
         id_tmp = id_tmp * 0x0019660D + 0x3C6EF35F;      // Randomization
         u8 next_ch = ((id_tmp >> 8) % 0x49) + 3;        // Use least-significant byte and must be larger than 3
 
-        if (((next_ch ^ id) & 0x01 )== 0)
+        if (((next_ch ^ id) & 0x01) == 0)
             continue;
         for (i = 0; i < idx; i++) {
             if(mRFChanBufs[i] == next_ch)
@@ -361,10 +355,9 @@ void RFProtocolDSM::calc_dsmx_channel(void)
         }
         if (i != idx)
             continue;
-        if ((next_ch < 28 && count_3_27 < 8)
-          ||(next_ch >= 28 && next_ch < 52 && count_28_51 < 7)
-          ||(next_ch >= 52 && count_52_76 < 8))
-        {
+        if ((next_ch < 28 && count_3_27 < 8) ||
+            (next_ch >= 28 && next_ch < 52 && count_28_51 < 7) ||
+            (next_ch >= 52 && count_52_76 < 8)) {
             mRFChanBufs[idx++] = next_ch;
         }
     }
@@ -565,9 +558,11 @@ NO_INLINE static void parse_telemetry_packet()
 #define WRITE_DELAY   1550  // Time after write to verify write complete
 #define READ_DELAY     400  // Time before write to check read state, and switch channel
 
-u16 RFProtocolDSM::dsm2_cb(void)
+u16 RFProtocolDSM::dsm2_cb(u32 now, u32 expected)
 {
-    u32 ts;
+//    if (mState > DSM2_CHANSEL) {
+//        LOG(F("%3d : %ld / %ld\n"), mState, now, expected);
+//    }
 
     switch (mState) {
         default:
@@ -578,16 +573,15 @@ u16 RFProtocolDSM::dsm2_cb(void)
                 //Note mState has already incremented,
                 // so this is actually 'even' mState
                 mDev.writePayload(mPacketBuf, MAX_PACKET_SIZE);
-                return 5000;
+                return (10000 - WRITE_DELAY);
             } else {
-                ts = micros();
                 while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
-                    if(micros() - ts > 500) {
+                    if(micros() - now > 500) {
                        LOG(F("MAX WAIT IRQ1\n"));
                         break;
                     }
                 }
-                return 5000;
+                return WRITE_DELAY;
             }
             break;
 
@@ -612,9 +606,8 @@ u16 RFProtocolDSM::dsm2_cb(void)
 
         case DSM2_CH1_CHECK_A:
         case DSM2_CH1_CHECK_B:
-            ts = micros();
             while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
-                if(micros() - ts > 500) {
+                if(micros() - now > 500) {
                     LOG(F("MAX WAIT IRQ2\n"));
                     break;
                 }
@@ -625,9 +618,8 @@ u16 RFProtocolDSM::dsm2_cb(void)
 
         case DSM2_CH2_CHECK_A:
         case DSM2_CH2_CHECK_B:
-            ts = micros();
             while (!(mDev.readReg(CYRF_04_TX_IRQ_STATUS) & 0x02)) {
-                if(micros() - ts > 500) {
+                if(micros() - now > 500) {
                     LOG(F("MAX WAIT IRQ3\n"));
                     break;
                 }
@@ -730,7 +722,7 @@ void RFProtocolDSM::initialize(u8 bind)
     printf("DSM2 Channels: %02x %02x\n", mRFChanBufs[0], mRFChanBufs[1]);
     */
 
-    mCRC     = ~((mMfgIDBuf[0] << 8) + mMfgIDBuf[1]);
+    mCRC     = ~(((u16)mMfgIDBuf[0] << 8) + mMfgIDBuf[1]);
     mSOPCol  = (mMfgIDBuf[0] + mMfgIDBuf[1] + mMfgIDBuf[2] + 2) & 0x07;
     mDataCol = 7 - mSOPCol;
     mChanCnt = 7;
@@ -753,15 +745,14 @@ void RFProtocolDSM::initialize(u8 bind)
     }
 }
 
-u16 RFProtocolDSM::callState(void)
+u16 RFProtocolDSM::callState(u32 now, u32 expected)
 {
-    return dsm2_cb();
+    return dsm2_cb(now, expected);
 }
 
 int RFProtocolDSM::init(void)
 {
     mChanIdx  = 0;
-    mPacketCtr   = 0;
     mFixedID     = 0;
 
     isStickMoved(1);
@@ -807,8 +798,7 @@ int RFProtocolDSM::getInfo(s8 id, u8 *data)
                 break;
 
             case INFO_PACKET_CTR:
-                size = sizeof(mPacketCtr);
-                *((u32*)data) = mPacketCtr;
+                *((u32*)data) = 0;
                 break;
         }
     }
