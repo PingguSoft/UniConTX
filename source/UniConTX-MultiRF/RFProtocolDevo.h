@@ -18,7 +18,6 @@
 
 #include "DeviceCYRF6936.h"
 #include "RFProtocol.h"
-#include "Timer.h"
 
 class RFProtocolDevo : public RFProtocol
 {

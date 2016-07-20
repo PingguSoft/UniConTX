@@ -18,7 +18,6 @@
 
 #include "DeviceA7105.h"
 #include "RFProtocol.h"
-#include "Timer.h"
 
 class RFProtocolHubsan : public RFProtocol
 {

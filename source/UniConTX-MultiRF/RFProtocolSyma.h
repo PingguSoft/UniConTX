@@ -18,7 +18,6 @@
 
 #include "DeviceNRF24L01.h"
 #include "RFProtocol.h"
-#include "Timer.h"
 
 class RFProtocolSyma : public RFProtocol
 {
